@@ -1,0 +1,431 @@
+#!/usr/bin/env python
+#
+# Copyright (c) 2013-2014 Marin Atanasov Nikolov <dnaeon@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer
+#    in this position and unchanged.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+"""
+The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
+
+"""
+
+import random
+import string
+import ConfigParser
+
+import ldap
+import zabbix_api
+from docopt import docopt
+
+class LDAPConn(object):
+    """
+    LDAP connector class
+
+    Defines methods for retrieving users and groups from LDAP server.
+
+    """
+    def __init__(self, uri, base):
+        self.uri   = uri
+        self.base  = base
+
+    def connect(self):
+        """
+        Establish a connection to the LDAP server.
+
+        Raises:
+            SystemExit
+        
+        """
+        self.conn  = ldap.initialize(self.uri)
+
+        try:
+            self.conn.simple_bind()
+        except ldap.SERVER_DOWN as e:
+            raise SystemExit, 'Cannot connect to LDAP server: %s' % e
+
+    def disconnect(self):
+        """
+        Disconnect from the LDAP server.
+
+        """
+        self.conn.unbind()
+
+    def get_group_members(self, group):
+        """
+        Retrieves the members of an LDAP group
+
+        Args:
+            group (str): The LDAP group name
+
+        Returns:
+            A list of all users in the LDAP group
+
+        """
+        attrlist = ['memberUid']
+        filter   = '(&(objectClass=posixGroup)(cn=%s))' % group
+        
+        result = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,
+                                    attrlist=attrlist)
+            
+        if not result:
+            print '>>> Unable to find group %s, skipping group' % group
+            return None
+
+        dn, users = result.pop()
+
+        return users['memberUid']
+
+    def get_user_sn(self, username):
+        """
+        Retrieves the 'sn' attribute of an LDAP user
+
+        Args:
+            username (str): The LDAP username to lookup
+
+        Returns:
+            The user's surname attribute
+
+        """
+        attrlist = ['sn']
+        filter   = '(&(objectClass=posixAccount)(uid=%s))' % username
+
+        result = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,
+                                    attrlist=attrlist)
+        
+        if not result:
+            return None
+        
+        dn, data = result.pop()
+
+        sn = data.get('sn')
+
+        if not sn:
+            return None
+
+        return sn.pop()
+
+    def get_user_givenname(self, username):
+        """
+        Retrieves the 'givenName' attribute of an LDAP user
+
+        Args:
+            username (str): The LDAP username to lookup
+
+        Returns:
+            The user's given name attribute
+
+        """
+        attrlist = ['givenName']
+        filter   = '(&(objectClass=posixAccount)(uid=%s))' % username
+
+        result = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,
+                                    attrlist=attrlist)
+        
+        if not result:
+            return None
+        
+        dn, data = result.pop()
+
+        name = data.get('giveName')
+
+        if not name:
+            return None
+
+        return name.pop()
+    
+class ZabbixConn(object):
+    """
+    Zabbix connector class
+
+    Defines methods for managing Zabbix users and groups
+
+    """
+    def __init__(self, server, username, password):
+        self.server   = server
+        self.username = username
+        self.password = password
+
+    def connect(self):
+        """
+        Establishes a connection to the Zabbix server
+
+        Raises:
+            SystemExit
+
+        """
+        self.conn = zabbix_api.ZabbixAPI(server=self.server)
+
+        try:
+            self.conn.login(user=self.username, password=self.password)
+        except zabbix_api.ZabbixAPIException as e:
+            raise SystemExit, 'Cannot login to Zabbix server: %s' % e
+        
+    def get_users(self):
+        """
+        Retrieves the existing Zabbix users
+
+        Returns:
+            A list of the existing Zabbix users
+
+        """
+        req = self.conn.json_obj(method='user.get', params={'output': 'extend'})
+        result = self.conn.do_request(req)
+
+        users = [user['alias'] for user in result['result']]
+        
+        return users
+
+    def get_user_id(self, user):
+        """
+        Retrieves the userid of a specified user
+
+        Args:
+            user (str): The Zabbix username to lookup
+
+        Returns:
+            The userid of the specified user
+        
+        """
+        req = self.conn.json_obj(method='user.get', params={'output': 'extend'})
+        result = self.conn.do_request(req)
+
+        userid = [u['userid'] for u in result['result'] if u['alias'] == user].pop()
+
+        return userid
+
+    def get_groups(self):
+        """
+        Retrieves the existing Zabbix groups
+
+        Returns:
+            A dict of the existing Zabbix groups and their group ids
+
+        """
+        req = self.conn.json_obj(method='usergroup.get',
+                                 params={'status': 0, 'output': 'extend' })
+
+        result = self.conn.do_request(req)
+
+        groups = [{'name': group['name'], 'usrgrpid': group['usrgrpid']} for group in result['result']]
+
+        return groups
+
+    def get_group_members(self, groupid):
+        """
+        Retrieves group members for a Zabbix group
+
+        Args:
+            groupid (int): The group id
+
+        Returns:
+            A list of the Zabbix users for the specified group id
+
+        """
+        req = self.conn.json_obj(method='user.get', params={'output': 'extend', 'usrgrpids': groupid})
+        result = self.conn.do_request(req)
+
+        users = [user['alias'] for user in result['result']]
+        
+        return users
+
+
+    def create_group(self, group):
+        """
+        Creates a new Zabbix group
+
+        Args:
+            group (str): The Zabbix group name to create
+
+        Returns:
+            The groupid of the newly created group
+
+        """
+        req = self.conn.json_obj(method='usergroup.create',
+                                 params={'name': group, 'permission': 3})
+        
+        result = self.conn.do_request(req)
+        groupid = result['result']['usrgrpids'].pop()
+
+        return groupid
+
+    def create_user(self, user, groupid):
+        """
+        Creates a new Zabbix user
+
+        Args:
+            user    (dict): A dict containing the user details
+            groupid  (int): The groupid for the new user
+
+        """
+        random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
+        
+        user_defaults = { 'autologin': 0, 'type': 3, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
+        user.update(user_defaults)
+
+        req = self.conn.json_obj(method='user.create',
+                                 params=user)
+        
+        result = self.conn.do_request(req)
+
+        return result['result']
+    
+    def update_user(self, user, groupid):
+        """
+        Adds an existing Zabbix user to a group
+
+        Args:
+            user    (dict): A dict containing the user details
+            groupid  (int): The groupid to add the user to
+
+        """
+        userid = self.get_user_id(user)
+        req = self.conn.json_obj(method='user.update',
+                                params={'userid': userid, 'usrgrps': [ { 'usrgrpid': str(groupid) } ]})
+        
+        result = self.conn.do_request(req)
+
+        return result['result']
+    
+    def create_missing_groups(self, ldap_groups):
+        """
+        Creates any missing LDAP groups in Zabbix
+
+        Args:
+            ldap_groups (list): A list of LDAP groups to create
+
+        """
+        missing_groups = set(ldap_groups) - set([g['name'] for g in self.get_groups()])
+
+        for eachGroup in missing_groups:
+            print '>>> Creating Zabbix group %s' % eachGroup
+            grpid = self.create_group(eachGroup)
+            print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
+
+    def sync_users(self, ldap_uri, ldap_base, ldap_groups):
+        """
+        Syncs Zabbix with LDAP users
+
+        """
+        ldap_conn = LDAPConn(ldap_uri, ldap_base)
+        ldap_conn.connect()
+
+        zabbix_all_users = self.get_users()
+
+        for eachGroup in ldap_groups:
+            ldap_users = ldap_conn.get_group_members(eachGroup)
+
+            if not ldap_users:
+                continue
+            
+            zabbix_grpid = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
+            zabbix_group_users = self.get_group_members(zabbix_grpid)
+            
+            missing_users = set(ldap_users) - set(zabbix_group_users)
+
+            # Add missing users
+            for eachUser in missing_users:
+
+                # Create new user if it does not exists already
+                if eachUser not in zabbix_all_users:
+                    print '>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup)
+                    user = { 'alias': eachUser }
+                    user['name'] = ldap_conn.get_user_givenname(eachUser)
+                    user['surname'] = ldap_conn.get_user_sn(eachUser)
+                    self.create_user(user, zabbix_grpid)
+                    zabbix_all_users.append(eachUser)
+                else:
+                    # Update existing user to be member of the group
+                    print '>>> Updating user %s, changing group to %s' % (eachUser, eachGroup)
+                    self.update_user(eachUser, zabbix_grpid)
+
+            # Just mention any extra users in the groups, do not remove them
+            extra_users = set(zabbix_group_users) - set(ldap_users)
+            if extra_users:
+                print '>>> Users in group %s which are not found in LDAP group:' % eachGroup
+                for eachUser in extra_users:
+                    print ' * %s' % eachUser
+
+        ldap_conn.disconnect()
+        
+class ZabbixLDAPConf(object):
+    """
+    Zabbix-LDAP configuration class
+
+    Provides methods for parsing and retrieving config entries
+    
+    """
+    def __init__(self, config):
+        self.config = config
+
+    def load_config(self):
+        """
+        Loads the configuration file
+
+        Raises:
+            ConfigParser.NoOptionError
+
+        """
+        parser = ConfigParser.ConfigParser()
+        parser.read(self.config)
+
+        try:
+            self.ldap_uri     = parser.get('ldap', 'uri')
+            self.ldap_base    = parser.get('ldap', 'base')
+            self.ldap_groups  = parser.get('ldap', 'groups').split(',')
+            self.zbx_server   = parser.get('zabbix', 'server')
+            self.zbx_username = parser.get('zabbix', 'username')
+            self.zbx_password = parser.get('zabbix', 'password')
+        except ConfigParser.NoOptionError as e:
+            raise SystemExit, 'Configuration issues detected in %s' % self.config
+
+def main():
+    usage="""
+Usage: zabbix-ldap-sync -f <config>
+       zabbix-ldap-sync -v
+       zabbix-ldap-sync -h
+
+Options:
+  -h, --help                    Display this usage info
+  -v, --version                 Display version and exit
+  -f <config>, --file <config>  Configuration file to use
+
+"""
+    args = docopt(usage, version="0.1.0")
+
+    config = ZabbixLDAPConf(args['--file'])
+    config.load_config()
+    
+    zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
+    zabbix_conn.connect()
+
+    zabbix_conn.create_missing_groups(config.ldap_groups)
+    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups)
+
+if __name__ == '__main__':
+    main()
