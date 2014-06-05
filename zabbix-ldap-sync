@@ -44,9 +44,11 @@ class LDAPConn(object):
     Defines methods for retrieving users and groups from LDAP server.
 
     """
-    def __init__(self, uri, base):
+    def __init__(self, uri, base, user, passwd):
         self.uri   = uri
         self.base  = base
+        self.ldap_user  = user
+        self.ldap_pass  = passwd
 
     def connect(self):
         """
@@ -59,7 +61,7 @@ class LDAPConn(object):
         self.conn  = ldap.initialize(self.uri)
 
         try:
-            self.conn.simple_bind()
+            self.conn.simple_bind(self.ldap_user, self.ldap_pass)
         except ldap.SERVER_DOWN as e:
             raise SystemExit, 'Cannot connect to LDAP server: %s' % e
 
@@ -327,12 +329,12 @@ class ZabbixConn(object):
             grpid = self.create_group(eachGroup)
             print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
 
-    def sync_users(self, ldap_uri, ldap_base, ldap_groups):
+    def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass):
         """
         Syncs Zabbix with LDAP users
 
         """
-        ldap_conn = LDAPConn(ldap_uri, ldap_base)
+        ldap_conn = LDAPConn(ldap_uri, ldap_base, ldap_user, ldap_pass)
         ldap_conn.connect()
 
         zabbix_all_users = self.get_users()
@@ -398,6 +400,9 @@ class ZabbixLDAPConf(object):
             self.ldap_uri     = parser.get('ldap', 'uri')
             self.ldap_base    = parser.get('ldap', 'base')
             self.ldap_groups  = parser.get('ldap', 'groups').split(',')
+            self.ldap_type    = parser.get('ldap', 'type')
+            self.ldap_user    = parser.get('ldap', 'binduser')
+            self.ldap_pass    = parser.get('ldap', 'bindpass')
             self.zbx_server   = parser.get('zabbix', 'server')
             self.zbx_username = parser.get('zabbix', 'username')
             self.zbx_password = parser.get('zabbix', 'password')
@@ -425,7 +430,7 @@ Options:
     zabbix_conn.connect()
 
     zabbix_conn.create_missing_groups(config.ldap_groups)
-    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups)
+    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups, config.ldap_user, config.ldap_pass)
 
 if __name__ == '__main__':
     main()
