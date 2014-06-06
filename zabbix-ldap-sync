@@ -152,7 +152,7 @@ class LDAPConn(object):
         
         dn, data = result.pop()
 
-        name = data.get('giveName')
+        name = data.get('givenName')
 
         if not name:
             return None
