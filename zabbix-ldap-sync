@@ -337,9 +337,10 @@ class ZabbixConn(object):
 
         """
         userid = self.get_user_id(user)
-        req = self.conn.json_obj(method='user.update',
-                                params={'userid': userid, 'usrgrps': [ { 'usrgrpid': str(groupid) } ]})
-        
+
+        req = self.conn.json_obj(method='usergroup.massadd',
+                                params={'usrgrpids': [str(groupid)], 'userids': [str(userid)] })
+
         result = self.conn.do_request(req)
 
         return result['result']
@@ -394,7 +395,7 @@ class ZabbixConn(object):
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
-                    print '>>> Updating user %s, changing group to %s' % (eachUser, eachGroup)
+                    print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
                     self.update_user(eachUser, zabbix_grpid)
 
             # Just mention any extra users in the groups, do not remove them
