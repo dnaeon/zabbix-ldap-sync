@@ -317,7 +317,7 @@ class ZabbixConn(object):
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
         
-        user_defaults = { 'autologin': 0, 'type': 3, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
+        user_defaults = { 'autologin': 0, 'type': 1, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
         user.update(user_defaults)
 
         req = self.conn.json_obj(method='user.create',
