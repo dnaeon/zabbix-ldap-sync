@@ -32,6 +32,7 @@ The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 import random
 import string
 import ConfigParser
+import sys
 
 import ldap
 import zabbix_api
@@ -83,21 +84,50 @@ class LDAPConn(object):
             A list of all users in the LDAP group
 
         """
-        attrlist = ['memberUid']
-        filter   = '(&(objectClass=posixGroup)(cn=%s))' % group
-        
+        attrlist = [group_member_attribute]
+        filter   = group_filter % group
+
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,
                                     attrlist=attrlist)
-            
+
         if not result:
             print '>>> Unable to find group %s, skipping group' % group
             return None
 
-        dn, users = result.pop()
+        # if this is activedirectory, we have to replace each CN with the actual username
+        if active_directory:
 
-        return users['memberUid']
+            final_listing = []
+
+            for members in result:
+                result_dn = members[0]
+                result_attrs = members[1]
+
+            if "member" in result_attrs:
+                for member in result_attrs["member"]:
+
+                    attrlist = ['sAMAccountName']
+                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % member
+
+                    # get the actual LDAP object for each group member
+                    uid = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,
+                                    attrlist=attrlist)
+
+                    dn, users = uid.pop()
+                    username = users.get('sAMAccountName') 
+                    final_listing.append(str(username)[2 : -2])                   
+
+            return final_listing
+
+        else:
+
+            dn, users = result.pop()
+
+            return users[group_member_attribute]
 
     def get_user_sn(self, username):
         """
@@ -111,7 +141,7 @@ class LDAPConn(object):
 
         """
         attrlist = ['sn']
-        filter   = '(&(objectClass=posixAccount)(uid=%s))' % username
+        filter   = sn_filter % username
 
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
@@ -142,7 +172,7 @@ class LDAPConn(object):
 
         """
         attrlist = ['givenName']
-        filter   = '(&(objectClass=posixAccount)(uid=%s))' % username
+        filter   = givenname_filter % username
 
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
@@ -154,7 +184,7 @@ class LDAPConn(object):
         
         dn, data = result.pop()
 
-        name = data.get('giveName')
+        name = data.get('givenName')
 
         if not name:
             return None
@@ -346,8 +376,9 @@ class ZabbixConn(object):
                 continue
             
             zabbix_grpid = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
+
             zabbix_group_users = self.get_group_members(zabbix_grpid)
-            
+
             missing_users = set(ldap_users) - set(zabbix_group_users)
 
             # Add missing users
@@ -425,7 +456,26 @@ Options:
 
     config = ZabbixLDAPConf(args['--file'])
     config.load_config()
-    
+
+    # set up AD differences, if necessary
+    global active_directory
+    global group_filter
+    global group_member_attribute
+    global uid_attribute
+    global sn_filter
+    global givenname_filter
+    if config.ldap_type == 'activedirectory':
+        active_directory = "true"
+        group_filter = "(&(objectClass=group)(name=%s))"
+        group_member_attribute = "member"
+        uid_attribute = "sAMAccountName"
+        sn_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+        givenname_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+    else:
+        group_filter = "(&(objectClass=posixGroup)(cn=%s))"
+        group_member_attribute = "memberUid"
+        sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
+        givenname_filter = "(&(objectClass=posixAccount)(uid=%s))"
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
     zabbix_conn.connect()
 
