@@ -32,6 +32,7 @@ The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 import random
 import string
 import ConfigParser
+import sys
 
 import ldap
 import zabbix_api
@@ -44,9 +45,11 @@ class LDAPConn(object):
     Defines methods for retrieving users and groups from LDAP server.
 
     """
-    def __init__(self, uri, base):
+    def __init__(self, uri, base, user, passwd):
         self.uri   = uri
         self.base  = base
+        self.ldap_user  = user
+        self.ldap_pass  = passwd
 
     def connect(self):
         """
@@ -59,7 +62,7 @@ class LDAPConn(object):
         self.conn  = ldap.initialize(self.uri)
 
         try:
-            self.conn.simple_bind()
+            self.conn.simple_bind(self.ldap_user, self.ldap_pass)
         except ldap.SERVER_DOWN as e:
             raise SystemExit, 'Cannot connect to LDAP server: %s' % e
 
@@ -81,21 +84,81 @@ class LDAPConn(object):
             A list of all users in the LDAP group
 
         """
-        attrlist = ['memberUid']
-        filter   = '(&(objectClass=posixGroup)(cn=%s))' % group
-        
+        attrlist = [group_member_attribute]
+        filter   = group_filter % group
+
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,
                                     attrlist=attrlist)
-            
+
         if not result:
             print '>>> Unable to find group %s, skipping group' % group
             return None
 
-        dn, users = result.pop()
+        # if this is activedirectory, we have to replace each CN with the actual username
+        if active_directory:
 
-        return users['memberUid']
+            final_listing = []
+
+            for members in result:
+                result_dn = members[0]
+                result_attrs = members[1]
+
+            if "member" in result_attrs:
+                for member in result_attrs["member"]:
+
+                    attrlist = ['sAMAccountName']
+                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % member
+
+                    # get the actual LDAP object for each group member
+                    uid = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,
+                                    attrlist=attrlist)
+
+                    dn, users = uid.pop()
+                    username = users.get('sAMAccountName') 
+                    final_listing.append(str(username)[2 : -2])                   
+
+            return final_listing
+
+        else:
+
+            dn, users = result.pop()
+
+            return users[group_member_attribute]
+
+    def get_user_email(self, username):
+        """
+        Retrieves the 'mail' attribute of an LDAP user
+
+        Args:
+            username (str): The LDAP username to lookup
+
+        Returns:
+            The user's mail attribute
+
+        """
+        attrlist = ['mail']
+        filter   = mail_filter % username
+
+        result = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,
+                                    attrlist=attrlist)
+
+        if not result:
+            return None
+
+        dn, data = result.pop()
+
+        mail = data.get('mail')
+
+        if not mail:
+            return None
+
+        return mail.pop()
 
     def get_user_sn(self, username):
         """
@@ -109,7 +172,7 @@ class LDAPConn(object):
 
         """
         attrlist = ['sn']
-        filter   = '(&(objectClass=posixAccount)(uid=%s))' % username
+        filter   = sn_filter % username
 
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
@@ -140,7 +203,7 @@ class LDAPConn(object):
 
         """
         attrlist = ['givenName']
-        filter   = '(&(objectClass=posixAccount)(uid=%s))' % username
+        filter   = givenname_filter % username
 
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
@@ -152,7 +215,7 @@ class LDAPConn(object):
         
         dn, data = result.pop()
 
-        name = data.get('giveName')
+        name = data.get('givenName')
 
         if not name:
             return None
@@ -285,7 +348,7 @@ class ZabbixConn(object):
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
         
-        user_defaults = { 'autologin': 0, 'type': 3, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
+        user_defaults = { 'autologin': 0, 'type': 1, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
         user.update(user_defaults)
 
         req = self.conn.json_obj(method='user.create',
@@ -305,13 +368,38 @@ class ZabbixConn(object):
 
         """
         userid = self.get_user_id(user)
-        req = self.conn.json_obj(method='user.update',
-                                params={'userid': userid, 'usrgrps': [ { 'usrgrpid': str(groupid) } ]})
-        
+
+        req = self.conn.json_obj(method='usergroup.massadd',
+                                params={'usrgrpids': [str(groupid)], 'userids': [str(userid)] })
+
         result = self.conn.do_request(req)
 
         return result['result']
-    
+
+    def update_media(self, user, mail):
+        """
+        Adds media (email) to an existing Zabbix user
+
+        Args:
+            user    (dict): A dict containing the user details
+
+        """
+
+        userid = self.get_user_id(user)
+
+        req = self.conn.json_obj(method='user.addmedia',
+                                params={'users': [ { "userid": str(userid) } ],
+                                        'medias': { 'mediatypeid': '1',
+                                                    'sendto': mail,
+                                                    'active': '0',
+                                                    'severity': '63',
+                                                    'period': '1-7,00:00-24:00' }
+                                        })
+
+        result = self.conn.do_request(req)
+
+        return result['result']
+
     def create_missing_groups(self, ldap_groups):
         """
         Creates any missing LDAP groups in Zabbix
@@ -327,12 +415,12 @@ class ZabbixConn(object):
             grpid = self.create_group(eachGroup)
             print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
 
-    def sync_users(self, ldap_uri, ldap_base, ldap_groups):
+    def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass):
         """
         Syncs Zabbix with LDAP users
 
         """
-        ldap_conn = LDAPConn(ldap_uri, ldap_base)
+        ldap_conn = LDAPConn(ldap_uri, ldap_base, ldap_user, ldap_pass)
         ldap_conn.connect()
 
         zabbix_all_users = self.get_users()
@@ -344,8 +432,9 @@ class ZabbixConn(object):
                 continue
             
             zabbix_grpid = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
+
             zabbix_group_users = self.get_group_members(zabbix_grpid)
-            
+
             missing_users = set(ldap_users) - set(zabbix_group_users)
 
             # Add missing users
@@ -359,9 +448,13 @@ class ZabbixConn(object):
                     user['surname'] = ldap_conn.get_user_sn(eachUser)
                     self.create_user(user, zabbix_grpid)
                     zabbix_all_users.append(eachUser)
+                    print '>>> Updating user media for %s, adding email' % eachUser
+                    mailaddress = ldap_conn.get_user_email(eachUser)
+                    if mailaddress:
+                        self.update_media(eachUser, mailaddress)
                 else:
                     # Update existing user to be member of the group
-                    print '>>> Updating user %s, changing group to %s' % (eachUser, eachGroup)
+                    print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
                     self.update_user(eachUser, zabbix_grpid)
 
             # Just mention any extra users in the groups, do not remove them
@@ -398,6 +491,9 @@ class ZabbixLDAPConf(object):
             self.ldap_uri     = parser.get('ldap', 'uri')
             self.ldap_base    = parser.get('ldap', 'base')
             self.ldap_groups  = parser.get('ldap', 'groups').split(',')
+            self.ldap_type    = parser.get('ldap', 'type')
+            self.ldap_user    = parser.get('ldap', 'binduser')
+            self.ldap_pass    = parser.get('ldap', 'bindpass')
             self.zbx_server   = parser.get('zabbix', 'server')
             self.zbx_username = parser.get('zabbix', 'username')
             self.zbx_password = parser.get('zabbix', 'password')
@@ -420,12 +516,34 @@ Options:
 
     config = ZabbixLDAPConf(args['--file'])
     config.load_config()
-    
+
+    # set up AD differences, if necessary
+    global active_directory
+    global group_filter
+    global group_member_attribute
+    global uid_attribute
+    global sn_filter
+    global givenname_filter
+    global mail_filter
+    if config.ldap_type == 'activedirectory':
+        active_directory = "true"
+        group_filter = "(&(objectClass=group)(name=%s))"
+        group_member_attribute = "member"
+        uid_attribute = "sAMAccountName"
+        sn_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+        givenname_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+        mail_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+    else:
+        group_filter = "(&(objectClass=posixGroup)(cn=%s))"
+        group_member_attribute = "memberUid"
+        sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
+        givenname_filter = "(&(objectClass=posixAccount)(uid=%s))"
+        mail_filter = "(&(objectClass=posixAccount)(uid=%s))"
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
     zabbix_conn.connect()
 
     zabbix_conn.create_missing_groups(config.ldap_groups)
-    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups)
+    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups, config.ldap_user, config.ldap_pass)
 
 if __name__ == '__main__':
     main()
