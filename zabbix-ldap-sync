@@ -129,18 +129,19 @@ class LDAPConn(object):
 
             return users[group_member_attribute]
 
-    def get_user_email(self, username):
+    def get_user_email(self, username, ldap_mail):
         """
         Retrieves the 'mail' attribute of an LDAP user
 
         Args:
             username (str): The LDAP username to lookup
+            ldap_mail (str): The name of the field containing the mail address
 
         Returns:
             The user's mail attribute
 
         """
-        attrlist = ['mail']
+        attrlist = [ldap_mail]
         filter   = mail_filter % username
 
         result = self.conn.search_s(base=self.base,
@@ -153,7 +154,7 @@ class LDAPConn(object):
 
         dn, data = result.pop()
 
-        mail = data.get('mail')
+        mail = data.get(ldap_mail)
 
         if not mail:
             return None
@@ -415,7 +416,7 @@ class ZabbixConn(object):
             grpid = self.create_group(eachGroup)
             print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
 
-    def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass):
+    def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass, ldap_mail):
         """
         Syncs Zabbix with LDAP users
 
@@ -449,7 +450,7 @@ class ZabbixConn(object):
                     self.create_user(user, zabbix_grpid)
                     zabbix_all_users.append(eachUser)
                     print '>>> Updating user media for %s, adding email' % eachUser
-                    mailaddress = ldap_conn.get_user_email(eachUser)
+                    mailaddress = ldap_conn.get_user_email(eachUser, ldap_mail)
                     if mailaddress:
                         self.update_media(eachUser, mailaddress)
                 else:
@@ -484,7 +485,7 @@ class ZabbixLDAPConf(object):
             ConfigParser.NoOptionError
 
         """
-        parser = ConfigParser.ConfigParser()
+        parser = ConfigParser.ConfigParser({"mail": "mail"})
         parser.read(self.config)
 
         try:
@@ -494,6 +495,7 @@ class ZabbixLDAPConf(object):
             self.ldap_type    = parser.get('ldap', 'type')
             self.ldap_user    = parser.get('ldap', 'binduser')
             self.ldap_pass    = parser.get('ldap', 'bindpass')
+            self.ldap_mail    = parser.get('ldap', 'mail')
             self.zbx_server   = parser.get('zabbix', 'server')
             self.zbx_username = parser.get('zabbix', 'username')
             self.zbx_password = parser.get('zabbix', 'password')
@@ -544,7 +546,7 @@ Options:
     zabbix_conn.connect()
 
     zabbix_conn.create_missing_groups(config.ldap_groups)
-    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups, config.ldap_user, config.ldap_pass)
+    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups, config.ldap_user, config.ldap_pass, config.ldap_mail)
 
 if __name__ == '__main__':
     main()
