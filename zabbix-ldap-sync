@@ -534,6 +534,7 @@ Options:
         givenname_filter = "(&(objectClass=person)(sAMAccountName=%s))"
         mail_filter = "(&(objectClass=person)(sAMAccountName=%s))"
     else:
+        active_directory = None
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
         sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
