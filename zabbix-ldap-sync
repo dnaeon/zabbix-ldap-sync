@@ -106,21 +106,24 @@ class LDAPConn(object):
                 result_dn = members[0]
                 result_attrs = members[1]
 
-            if "member" in result_attrs:
-                for member in result_attrs["member"]:
+            	if "member" in result_attrs:
+                	for member in result_attrs["member"]:
+		    		member = member.replace("(","\\28")
+		    		member = member.replace(")","\\29")
 
-                    attrlist = ['sAMAccountName']
-                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % member
+                    		attrlist = ['userPrincipalName']
+                    		filter   = '(&(objectClass=person)(distinguishedName=%s))' % member
 
-                    # get the actual LDAP object for each group member
-                    uid = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
-                                    filterstr=filter,
-                                    attrlist=attrlist)
+                    		# get the actual LDAP object for each group member
+                    		uid = self.conn.search_s(base=self.base,
+                                    		scope=ldap.SCOPE_SUBTREE,
+                                    		filterstr=filter,
+                                    		attrlist=attrlist)
 
-                    dn, users = uid.pop()
-                    username = users.get('sAMAccountName') 
-                    final_listing.append(str(username)[2 : -2])                   
+
+                    		dn, users = uid.pop(0)
+                    		username = users.get('userPrincipalName') 
+                    		final_listing.append(str(username)[2 : -2])                   
 
             return final_listing
 
@@ -153,7 +156,7 @@ class LDAPConn(object):
         if not result:
             return None
 
-        dn, data = result.pop()
+        dn, data = result.pop(0)
 
         mail = data.get(ldap_mail)
 
@@ -184,7 +187,7 @@ class LDAPConn(object):
         if not result:
             return None
         
-        dn, data = result.pop()
+        dn, data = result.pop(0)
 
         sn = data.get('sn')
 
@@ -214,15 +217,14 @@ class LDAPConn(object):
         
         if not result:
             return None
-        
-        dn, data = result.pop()
+        dn, data = result.pop(0)
 
         name = data.get('givenName')
 
         if not name:
             return None
 
-        return name.pop()
+        return name.pop(0)
     
 class ZabbixConn(object):
     """
@@ -532,10 +534,10 @@ Options:
         active_directory = "true"
         group_filter = "(&(objectClass=group)(name=%s))"
         group_member_attribute = "member"
-        uid_attribute = "sAMAccountName"
-        sn_filter = "(&(objectClass=person)(sAMAccountName=%s))"
-        givenname_filter = "(&(objectClass=person)(sAMAccountName=%s))"
-        mail_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+        uid_attribute = "userPrincipalName"
+        sn_filter = "(&(objectClass=person)(userPrincipalName=%s))"
+        givenname_filter = "(&(objectClass=person)(userPrincipalName=%s))"
+        mail_filter = "(&(objectClass=person)(userPrincipalName=%s))"
     else:
         active_directory = None
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
