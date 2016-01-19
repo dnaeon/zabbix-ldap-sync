@@ -57,7 +57,7 @@ class LDAPConn(object):
 
         Raises:
             SystemExit
-        
+
         """
         self.conn  = ldap.initialize(self.uri)
 	self.conn.set_option(ldap.OPT_REFERRALS,0)
@@ -119,8 +119,8 @@ class LDAPConn(object):
                                     attrlist=attrlist)
 
                     dn, users = uid.pop()
-                    username = users.get('sAMAccountName') 
-                    final_listing.append(str(username)[2 : -2])                   
+                    username = users.get('sAMAccountName')
+                    final_listing.append(str(username)[2 : -2])
 
             return final_listing
 
@@ -180,10 +180,10 @@ class LDAPConn(object):
                                     scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,
                                     attrlist=attrlist)
-        
+
         if not result:
             return None
-        
+
         dn, data = result.pop()
 
         sn = data.get('sn')
@@ -211,10 +211,10 @@ class LDAPConn(object):
                                     scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,
                                     attrlist=attrlist)
-        
+
         if not result:
             return None
-        
+
         dn, data = result.pop()
 
         name = data.get('givenName')
@@ -223,7 +223,7 @@ class LDAPConn(object):
             return None
 
         return name.pop()
-    
+
 class ZabbixConn(object):
     """
     Zabbix connector class
@@ -250,7 +250,7 @@ class ZabbixConn(object):
             self.conn.login(user=self.username, password=self.password)
         except zabbix_api.ZabbixAPIException as e:
             raise SystemExit, 'Cannot login to Zabbix server: %s' % e
-        
+
     def get_users(self):
         """
         Retrieves the existing Zabbix users
@@ -263,7 +263,7 @@ class ZabbixConn(object):
         result = self.conn.do_request(req)
 
         users = [user['alias'] for user in result['result']]
-        
+
         return users
 
     def get_user_id(self, user):
@@ -275,7 +275,7 @@ class ZabbixConn(object):
 
         Returns:
             The userid of the specified user
-        
+
         """
         req = self.conn.json_obj(method='user.get', params={'output': 'extend'})
         result = self.conn.do_request(req)
@@ -316,7 +316,7 @@ class ZabbixConn(object):
         result = self.conn.do_request(req)
 
         users = [user['alias'] for user in result['result']]
-        
+
         return users
 
 
@@ -333,7 +333,7 @@ class ZabbixConn(object):
         """
         req = self.conn.json_obj(method='usergroup.create',
                                  params={'name': group, 'permission': 3})
-        
+
         result = self.conn.do_request(req)
         groupid = result['result']['usrgrpids'].pop()
 
@@ -349,17 +349,17 @@ class ZabbixConn(object):
 
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
-        
+
         user_defaults = { 'autologin': 0, 'type': 1, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
         user.update(user_defaults)
 
         req = self.conn.json_obj(method='user.create',
                                  params=user)
-        
+
         result = self.conn.do_request(req)
 
         return result['result']
-    
+
     def update_user(self, user, groupid):
         """
         Adds an existing Zabbix user to a group
@@ -432,7 +432,7 @@ class ZabbixConn(object):
 
             if not ldap_users:
                 continue
-            
+
             zabbix_grpid = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
 
             zabbix_group_users = self.get_group_members(zabbix_grpid)
@@ -467,13 +467,13 @@ class ZabbixConn(object):
                     print ' * %s' % eachUser
 
         ldap_conn.disconnect()
-        
+
 class ZabbixLDAPConf(object):
     """
     Zabbix-LDAP configuration class
 
     Provides methods for parsing and retrieving config entries
-    
+
     """
     def __init__(self, config):
         self.config = config
