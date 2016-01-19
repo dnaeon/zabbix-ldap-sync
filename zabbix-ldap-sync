@@ -492,7 +492,7 @@ class ZabbixLDAPConf(object):
         try:
             self.ldap_uri     = parser.get('ldap', 'uri')
             self.ldap_base    = parser.get('ldap', 'base')
-            self.ldap_groups  = parser.get('ldap', 'groups').split(',')
+            self.ldap_groups  = [i.strip() for i in parser.get('ldap', 'groups').split(',')]
             self.ldap_type    = parser.get('ldap', 'type')
             self.ldap_user    = parser.get('ldap', 'binduser')
             self.ldap_pass    = parser.get('ldap', 'bindpass')
