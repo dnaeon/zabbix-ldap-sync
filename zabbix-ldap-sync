@@ -1,28 +1,4 @@
 #!/usr/bin/env python
-#
-# Copyright (c) 2013-2014 Marin Atanasov Nikolov <dnaeon@gmail.com>
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer
-#    in this position and unchanged.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
@@ -33,8 +9,8 @@ import random
 import string
 import ConfigParser
 import sys
-
 import ldap
+import ldap.filter
 import zabbix_api
 from docopt import docopt
 
@@ -110,7 +86,7 @@ class LDAPConn(object):
                 for member in result_attrs["member"]:
 
                     attrlist = ['sAMAccountName']
-                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % member
+                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % ldap.filter.escape_filter_chars(member)
 
                     # get the actual LDAP object for each group member
                     uid = self.conn.search_s(base=self.base,
@@ -193,7 +169,7 @@ class LDAPConn(object):
 
         return sn.pop()
 
-    def get_user_givenname(self, username):
+    def get_user_givenName(self, username):
         """
         Retrieves the 'givenName' attribute of an LDAP user
 
@@ -205,7 +181,7 @@ class LDAPConn(object):
 
         """
         attrlist = ['givenName']
-        filter   = givenname_filter % username
+        filter   = givenName_filter % username
 
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
@@ -446,7 +422,7 @@ class ZabbixConn(object):
                 if eachUser not in zabbix_all_users:
                     print '>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup)
                     user = { 'alias': eachUser }
-                    user['name'] = ldap_conn.get_user_givenname(eachUser)
+                    user['name'] = ldap_conn.get_user_givenName(eachUser)
                     user['surname'] = ldap_conn.get_user_sn(eachUser)
                     self.create_user(user, zabbix_grpid)
                     zabbix_all_users.append(eachUser)
@@ -526,7 +502,7 @@ Options:
     global group_member_attribute
     global uid_attribute
     global sn_filter
-    global givenname_filter
+    global givenName_filter
     global mail_filter
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
@@ -534,14 +510,14 @@ Options:
         group_member_attribute = "member"
         uid_attribute = "sAMAccountName"
         sn_filter = "(&(objectClass=person)(sAMAccountName=%s))"
-        givenname_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+        givenName_filter = "(&(objectClass=person)(sAMAccountName=%s))"
         mail_filter = "(&(objectClass=person)(sAMAccountName=%s))"
     else:
         active_directory = None
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
         sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
-        givenname_filter = "(&(objectClass=posixAccount)(uid=%s))"
+        givenName_filter = "(&(objectClass=posixAccount)(uid=%s))"
         mail_filter = "(&(objectClass=posixAccount)(uid=%s))"
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
     zabbix_conn.connect()
