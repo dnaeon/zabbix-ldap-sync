@@ -33,8 +33,8 @@ import random
 import string
 import ConfigParser
 import sys
-
 import ldap
+import ldap.filter
 import zabbix_api
 from docopt import docopt
 
@@ -110,7 +110,7 @@ class LDAPConn(object):
                 for member in result_attrs["member"]:
 
                     attrlist = ['sAMAccountName']
-                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % member
+                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % ldap.filter.escape_filter_chars(member)
 
                     # get the actual LDAP object for each group member
                     uid = self.conn.search_s(base=self.base,
@@ -193,7 +193,7 @@ class LDAPConn(object):
 
         return sn.pop()
 
-    def get_user_givenname(self, username):
+    def get_user_givenName(self, username):
         """
         Retrieves the 'givenName' attribute of an LDAP user
 
@@ -205,7 +205,7 @@ class LDAPConn(object):
 
         """
         attrlist = ['givenName']
-        filter   = givenname_filter % username
+        filter   = givenName_filter % username
 
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
@@ -446,7 +446,7 @@ class ZabbixConn(object):
                 if eachUser not in zabbix_all_users:
                     print '>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup)
                     user = { 'alias': eachUser }
-                    user['name'] = ldap_conn.get_user_givenname(eachUser)
+                    user['name'] = ldap_conn.get_user_givenName(eachUser)
                     user['surname'] = ldap_conn.get_user_sn(eachUser)
                     self.create_user(user, zabbix_grpid)
                     zabbix_all_users.append(eachUser)
@@ -526,7 +526,7 @@ Options:
     global group_member_attribute
     global uid_attribute
     global sn_filter
-    global givenname_filter
+    global givenName_filter
     global mail_filter
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
@@ -534,14 +534,14 @@ Options:
         group_member_attribute = "member"
         uid_attribute = "sAMAccountName"
         sn_filter = "(&(objectClass=person)(sAMAccountName=%s))"
-        givenname_filter = "(&(objectClass=person)(sAMAccountName=%s))"
+        givenName_filter = "(&(objectClass=person)(sAMAccountName=%s))"
         mail_filter = "(&(objectClass=person)(sAMAccountName=%s))"
     else:
         active_directory = None
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
         sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
-        givenname_filter = "(&(objectClass=posixAccount)(uid=%s))"
+        givenName_filter = "(&(objectClass=posixAccount)(uid=%s))"
         mail_filter = "(&(objectClass=posixAccount)(uid=%s))"
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
     zabbix_conn.connect()
