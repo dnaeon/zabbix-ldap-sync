@@ -35,7 +35,7 @@ import ConfigParser
 import sys
 import ldap
 import ldap.filter
-import zabbix_api
+from pyzabbix import ZabbixAPI
 from docopt import docopt
 
 class LDAPConn(object):
@@ -244,11 +244,11 @@ class ZabbixConn(object):
             SystemExit
 
         """
-        self.conn = zabbix_api.ZabbixAPI(server=self.server)
+        self.conn = ZabbixAPI(self.server)
 
         try:
-            self.conn.login(user=self.username, password=self.password)
-        except zabbix_api.ZabbixAPIException as e:
+            self.conn.login(self.username, self.password)
+        except ZabbixAPI.ZabbixAPIException as e:
             raise SystemExit, 'Cannot login to Zabbix server: %s' % e
 
     def get_users(self):
@@ -259,10 +259,9 @@ class ZabbixConn(object):
             A list of the existing Zabbix users
 
         """
-        req = self.conn.json_obj(method='user.get', params={'output': 'extend'})
-        result = self.conn.do_request(req)
+        result = self.conn.user.get(output='extend')
 
-        users = [user['alias'] for user in result['result']]
+        users = [user['alias'] for user in result]
 
         return users
 
@@ -277,10 +276,9 @@ class ZabbixConn(object):
             The userid of the specified user
 
         """
-        req = self.conn.json_obj(method='user.get', params={'output': 'extend'})
-        result = self.conn.do_request(req)
+        result = self.conn.user.get(output='extend')
 
-        userid = [u['userid'] for u in result['result'] if u['alias'] == user].pop()
+        userid = [u['userid'] for u in result if u['alias'] == user].pop()
 
         return userid
 
@@ -292,12 +290,9 @@ class ZabbixConn(object):
             A dict of the existing Zabbix groups and their group ids
 
         """
-        req = self.conn.json_obj(method='usergroup.get',
-                                 params={'status': 0, 'output': 'extend' })
+        result = self.conn.usergroup.get(status=0,output='extend')
 
-        result = self.conn.do_request(req)
-
-        groups = [{'name': group['name'], 'usrgrpid': group['usrgrpid']} for group in result['result']]
+        groups = [{'name': group['name'], 'usrgrpid': group['usrgrpid']} for group in result]
 
         return groups
 
@@ -312,10 +307,9 @@ class ZabbixConn(object):
             A list of the Zabbix users for the specified group id
 
         """
-        req = self.conn.json_obj(method='user.get', params={'output': 'extend', 'usrgrpids': groupid})
-        result = self.conn.do_request(req)
+        result = self.conn.user.get(output='extend',usrgrpids=groupid)
 
-        users = [user['alias'] for user in result['result']]
+        users = [user['alias'] for user in result]
 
         return users
 
@@ -331,11 +325,9 @@ class ZabbixConn(object):
             The groupid of the newly created group
 
         """
-        req = self.conn.json_obj(method='usergroup.create',
-                                 params={'name': group, 'permission': 3})
+        result = self.conn.usergroup.create(name=group,permission=3)
 
-        result = self.conn.do_request(req)
-        groupid = result['result']['usrgrpids'].pop()
+        groupid = result['usrgrpids'].pop()
 
         return groupid
 
@@ -353,12 +345,9 @@ class ZabbixConn(object):
         user_defaults = { 'autologin': 0, 'type': 1, 'usrgrps': [ { 'usrgrpid': str(groupid) } ], 'passwd': random_passwd}
         user.update(user_defaults)
 
-        req = self.conn.json_obj(method='user.create',
-                                 params=user)
+        result = self.conn.user.create(user)
 
-        result = self.conn.do_request(req)
-
-        return result['result']
+        return result
 
     def update_user(self, user, groupid):
         """
@@ -371,12 +360,9 @@ class ZabbixConn(object):
         """
         userid = self.get_user_id(user)
 
-        req = self.conn.json_obj(method='usergroup.massadd',
-                                params={'usrgrpids': [str(groupid)], 'userids': [str(userid)] })
+        result = self.conn.usergroup.massadd(usrgrpids=[str(groupid)], userids=[str(userid)])
 
-        result = self.conn.do_request(req)
-
-        return result['result']
+        return result
 
     def update_media(self, user, mail):
         """
@@ -389,18 +375,9 @@ class ZabbixConn(object):
 
         userid = self.get_user_id(user)
 
-        req = self.conn.json_obj(method='user.addmedia',
-                                params={'users': [ { "userid": str(userid) } ],
-                                        'medias': { 'mediatypeid': '1',
-                                                    'sendto': mail,
-                                                    'active': '0',
-                                                    'severity': '63',
-                                                    'period': '1-7,00:00-24:00' }
-                                        })
+        result = self.conn.user.addmedia(users=[ { "userid": str(userid) } ], medias={ 'mediatypeid': '1', 'sendto': mail, 'active': '0', 'severity': '63', 'period': '1-7,00:00-24:00' })
 
-        result = self.conn.do_request(req)
-
-        return result['result']
+        return result
 
     def create_missing_groups(self, ldap_groups):
         """

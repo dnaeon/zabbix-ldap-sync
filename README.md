@@ -8,7 +8,7 @@ It can automatically import existing LDAP groups and users into Zabbix, thus mak
 
 * Python 2.7.x
 * [python-ldap](https://pypi.python.org/pypi/python-ldap/)
-* [zabbix_api](https://github.com/gnetsman/zabbix_api)
+* [pyzabbix](https://github.com/lukecyca/pyzabbix)
 * [docopt](https://github.com/docopt/docopt)
 
 You also need to have your Zabbix Frontend configured to authenticate against an AD/LDAP directory server.
