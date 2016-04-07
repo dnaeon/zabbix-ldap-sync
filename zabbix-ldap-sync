@@ -120,7 +120,10 @@ class LDAPConn(object):
 
                     dn, users = uid.pop()
                     username = users.get('sAMAccountName')
-                    final_listing.append(str(username)[2 : -2])
+                    if lowercase:
+                        final_listing.append(str(username)[2 : -2].lower())
+                    else:
+                        final_listing.append(str(username)[2 : -2])
 
             return final_listing
 
@@ -482,17 +485,18 @@ class ZabbixLDAPConf(object):
 
 def main():
     usage="""
-Usage: zabbix-ldap-sync -f <config>
+Usage: zabbix-ldap-sync [-l] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
 Options:
   -h, --help                    Display this usage info
   -v, --version                 Display version and exit
+  -l, --lowercase               Create AD user names as lowercase
   -f <config>, --file <config>  Configuration file to use
 
 """
-    args = docopt(usage, version="0.1.0")
+    args = docopt(usage, version="0.1.1")
 
     config = ZabbixLDAPConf(args['--file'])
     config.load_config()
@@ -505,6 +509,8 @@ Options:
     global sn_filter
     global givenName_filter
     global mail_filter
+    global lowercase
+    lowercase = args['--lowercase']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
         group_filter = "(&(objectClass=group)(name=%s))"
