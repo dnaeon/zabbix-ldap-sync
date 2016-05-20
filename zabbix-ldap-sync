@@ -109,7 +109,7 @@ class LDAPConn(object):
             if "member" in result_attrs:
                 for member in result_attrs["member"]:
 
-                    attrlist = ['sAMAccountName']
+                    attrlist = [uid_attribute]
 
                     # get the actual LDAP object for each group member
                     uid = self.conn.search_s(base = member,
@@ -117,7 +117,7 @@ class LDAPConn(object):
                                     attrlist = attrlist)
 
                     dn, users = uid.pop()
-                    username = users.get('sAMAccountName')
+                    username = users.get(uid_attribute)
                     if lowercase:
                         username = str(username)[2 : -2].lower()
                     else:
