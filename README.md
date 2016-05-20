@@ -23,6 +23,8 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 	[ldap]
 	uri = ldaps://ldap.example.org:636/
 	base = dc=example,dc=org
+	binduser = DOMAIN\ldapuser
+	bindpass = ldappass
 	groups = sysadmins
 
 	[zabbix]
