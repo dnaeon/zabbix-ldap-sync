@@ -60,7 +60,7 @@ class LDAPConn(object):
 
         """
         self.conn  = ldap.initialize(self.uri)
-	self.conn.set_option(ldap.OPT_REFERRALS,0)
+        self.conn.set_option(ldap.OPT_REFERRALS,0)
 
         try:
             self.conn.simple_bind(self.ldap_user, self.ldap_pass)
@@ -100,7 +100,7 @@ class LDAPConn(object):
         # if this is activedirectory, we have to replace each CN with the actual username
         if active_directory:
 
-            final_listing = []
+            final_listing = {}
 
             for members in result:
                 result_dn = members[0]
@@ -110,20 +110,20 @@ class LDAPConn(object):
                 for member in result_attrs["member"]:
 
                     attrlist = ['sAMAccountName']
-                    filter   = '(&(objectClass=person)(distinguishedName=%s))' % ldap.filter.escape_filter_chars(member)
 
                     # get the actual LDAP object for each group member
-                    uid = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
-                                    filterstr=filter,
-                                    attrlist=attrlist)
+                    uid = self.conn.search_s(base = member,
+                                    scope = ldap.SCOPE_BASE,
+                                    attrlist = attrlist)
 
                     dn, users = uid.pop()
                     username = users.get('sAMAccountName')
                     if lowercase:
-                        final_listing.append(str(username)[2 : -2].lower())
+                        username = str(username)[2 : -2].lower()
                     else:
-                        final_listing.append(str(username)[2 : -2])
+                        username = str(username)[2 : -2]
+
+                    final_listing[username] = dn
 
             return final_listing
 
@@ -133,12 +133,12 @@ class LDAPConn(object):
 
             return users[group_member_attribute]
 
-    def get_user_email(self, username, ldap_mail):
+    def get_user_email(self, dn, ldap_mail):
         """
         Retrieves the 'mail' attribute of an LDAP user
 
         Args:
-            username (str): The LDAP username to lookup
+            username (str): The LDAP distinguished name to lookup
             ldap_mail (str): The name of the field containing the mail address
 
         Returns:
@@ -146,12 +146,10 @@ class LDAPConn(object):
 
         """
         attrlist = [ldap_mail]
-        filter   = mail_filter % username
 
-        result = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
-                                    filterstr=filter,
-                                    attrlist=attrlist)
+        result = self.conn.search_s(base = dn,
+                                    scope = ldap.SCOPE_BASE,
+                                    attrlist = attrlist)
 
         if not result:
             return None
@@ -165,23 +163,21 @@ class LDAPConn(object):
 
         return mail.pop()
 
-    def get_user_sn(self, username):
+    def get_user_sn(self, dn):
         """
         Retrieves the 'sn' attribute of an LDAP user
 
         Args:
-            username (str): The LDAP username to lookup
+            username (str): The LDAP distinguished name to lookup
 
         Returns:
             The user's surname attribute
 
         """
         attrlist = ['sn']
-        filter   = sn_filter % username
 
-        result = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
-                                    filterstr=filter,
+        result = self.conn.search_s(base=dn,
+                                    scope=ldap.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -196,23 +192,21 @@ class LDAPConn(object):
 
         return sn.pop()
 
-    def get_user_givenName(self, username):
+    def get_user_givenName(self, dn):
         """
         Retrieves the 'givenName' attribute of an LDAP user
 
         Args:
-            username (str): The LDAP username to lookup
+            username (str): The LDAP distinguished name to lookup
 
         Returns:
             The user's given name attribute
 
         """
         attrlist = ['givenName']
-        filter   = givenName_filter % username
 
-        result = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
-                                    filterstr=filter,
+        result = self.conn.search_s(base=dn,
+                                    scope=ldap.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -417,7 +411,7 @@ class ZabbixConn(object):
 
             zabbix_group_users = self.get_group_members(zabbix_grpid)
 
-            missing_users = set(ldap_users) - set(zabbix_group_users)
+            missing_users = set(list(ldap_users.keys())) - set(zabbix_group_users)
 
             # Add missing users
             for eachUser in missing_users:
@@ -426,12 +420,12 @@ class ZabbixConn(object):
                 if eachUser not in zabbix_all_users:
                     print '>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup)
                     user = { 'alias': eachUser }
-                    user['name'] = ldap_conn.get_user_givenName(eachUser)
-                    user['surname'] = ldap_conn.get_user_sn(eachUser)
+                    user['name'] = ldap_conn.get_user_givenName(ldap_users[eachUser])
+                    user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
                     self.create_user(user, zabbix_grpid)
                     zabbix_all_users.append(eachUser)
                     print '>>> Updating user media for %s, adding email' % eachUser
-                    mailaddress = ldap_conn.get_user_email(eachUser, ldap_mail)
+                    mailaddress = ldap_conn.get_user_email(ldap_users[eachUser], ldap_mail)
                     if mailaddress:
                         self.update_media(eachUser, mailaddress)
                 else:
@@ -440,7 +434,7 @@ class ZabbixConn(object):
                     self.update_user(eachUser, zabbix_grpid)
 
             # Just mention any extra users in the groups, do not remove them
-            extra_users = set(zabbix_group_users) - set(ldap_users)
+            extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
             if extra_users:
                 print '>>> Users in group %s which are not found in LDAP group:' % eachGroup
                 for eachUser in extra_users:
@@ -516,10 +510,9 @@ Options:
         group_filter = "(&(objectClass=group)(name=%s))"
         group_member_attribute = "member"
         uid_attribute = "sAMAccountName"
-        sn_filter = "(&(objectClass=person)(sAMAccountName=%s))"
-        givenName_filter = "(&(objectClass=person)(sAMAccountName=%s))"
-        mail_filter = "(&(objectClass=person)(sAMAccountName=%s))"
     else:
+        # Remove once someone figures out how to get DN's from LDAP
+        raise SystemExit, 'Only "activedirectory" type is supported in this version!'
         active_directory = None
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
