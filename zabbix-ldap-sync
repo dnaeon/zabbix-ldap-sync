@@ -108,22 +108,29 @@ class LDAPConn(object):
 
             if "member" in result_attrs:
                 for member in result_attrs["member"]:
-
                     attrlist = [uid_attribute]
 
                     # get the actual LDAP object for each group member
-                    uid = self.conn.search_s(base = member,
-                                    scope = ldap.SCOPE_BASE,
-                                    attrlist = attrlist)
-
-                    dn, users = uid.pop()
-                    username = users.get(uid_attribute)
-                    if lowercase:
-                        username = str(username)[2 : -2].lower()
+                    if skipdisabled:
+                        uid = self.conn.search_s(base = member,
+                                        scope = ldap.SCOPE_BASE,
+                                        filterstr = disabled_filter,
+                                        attrlist = attrlist)
                     else:
-                        username = str(username)[2 : -2]
+                        uid = self.conn.search_s(base = member,
+                                        scope = ldap.SCOPE_BASE,
+                                        attrlist = attrlist)
 
-                    final_listing[username] = dn
+                    if uid:
+                        dn, users = uid.pop()
+                        username = users.get(uid_attribute)
+
+                        if lowercase:
+                            username = str(username)[2 : -2].lower()
+                        else:
+                            username = str(username)[2 : -2]
+
+                        final_listing[username] = dn
 
             return final_listing
 
@@ -477,7 +484,6 @@ class ZabbixLDAPConf(object):
             ConfigParser.NoOptionError
 
         """
-        #parser = ConfigParser.ConfigParser({"mail": "mail"})
         parser = ConfigParser.ConfigParser()
         parser.read(self.config)
 
@@ -508,7 +514,7 @@ class ZabbixLDAPConf(object):
 
 def main():
     usage="""
-Usage: zabbix-ldap-sync [-l] -f <config>
+Usage: zabbix-ldap-sync [-ls] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -516,6 +522,7 @@ Options:
   -h, --help                    Display this usage info
   -v, --version                 Display version and exit
   -l, --lowercase               Create AD user names as lowercase
+  -s, --skip-disabled           Skip disabled AD users
   -f <config>, --file <config>  Configuration file to use
 
 """
@@ -527,6 +534,7 @@ Options:
     # set up AD differences, if necessary
     global active_directory
     global group_filter
+    global disabled_filter
     global group_member_attribute
     global uid_attribute
     global dn_filter
@@ -534,10 +542,13 @@ Options:
     global givenName_filter
     global mail_filter
     global lowercase
+    global skipdisabled
     lowercase = args['--lowercase']
+    skipdisabled = args['--skip-disabled']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
         group_filter = "(&(objectClass=group)(name=%s))"
+        disabled_filter="(!(userAccountControl:1.2.840.113556.1.4.803:=2))"
         group_member_attribute = "member"
         uid_attribute = "sAMAccountName"
     else:
