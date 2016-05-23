@@ -97,7 +97,7 @@ class LDAPConn(object):
             print '>>> Unable to find group %s, skipping group' % group
             return None
 
-        # if this is activedirectory, we have to replace each CN with the actual username
+        # Get DN for each user in the group
         if active_directory:
 
             final_listing = {}
@@ -130,8 +130,24 @@ class LDAPConn(object):
         else:
 
             dn, users = result.pop()
+            
+            final_listing = {}
 
-            return users[group_member_attribute]
+            # Get DN for each user in the group
+            for uid in users[group_member_attribute]:
+                filter = dn_filter % uid
+                attrlist = ['']
+
+                # get the actual LDAP object for each group member
+                user = self.conn.search_s(base = self.base,
+                                    scope = ldap.SCOPE_SUBTREE,
+                                    filterstr = filter,
+                                    attrlist = attrlist)
+
+                for items in user:
+                    final_listing[uid] = items[0]
+            
+            return final_listing
 
     def get_user_email(self, dn, ldap_mail):
         """
@@ -506,6 +522,7 @@ Options:
     global group_filter
     global group_member_attribute
     global uid_attribute
+    global dn_filter
     global sn_filter
     global givenName_filter
     global mail_filter
@@ -517,11 +534,10 @@ Options:
         group_member_attribute = "member"
         uid_attribute = "sAMAccountName"
     else:
-        # Remove once someone figures out how to get DN's from LDAP
-        raise SystemExit, 'Only "activedirectory" type is supported in this version!'
         active_directory = None
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
+        dn_filter = "(&(objectClass=posixAccount)(uid=%s))"
         sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
         givenName_filter = "(&(objectClass=posixAccount)(uid=%s))"
         mail_filter = "(&(objectClass=posixAccount)(uid=%s))"
