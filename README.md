@@ -27,10 +27,28 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 	bindpass = ldappass
 	groups = sysadmins
 
+    [user]
+    type = 1
+
 	[zabbix]
 	server = http://zabbix.example.org/zabbix/
 	username = admin
 	password = adminp4ssw0rd
+
+`[user]` section is optional. It can be used to set custom properties for Zabbix user created by script. See [User object](https://www.zabbix.com/documentation/3.2/manual/api/reference/user/object) in Zabbix API documentation for available properties.
+
+## Command-line arguments
+
+    Usage: zabbix-ldap-sync [-ls] -f <config>
+           zabbix-ldap-sync -v
+           zabbix-ldap-sync -h
+    
+    Options:
+      -h, --help                    Display this usage info
+      -v, --version                 Display version and exit
+      -l, --lowercase               Create AD user names as lowercase
+      -s, --skip-disabled           Skip disabled AD users
+      -f <config>, --file <config>  Configuration file to use
 
 ## Importing LDAP users into Zabbix
 
