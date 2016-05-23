@@ -538,9 +538,6 @@ Options:
     global group_member_attribute
     global uid_attribute
     global dn_filter
-    global sn_filter
-    global givenName_filter
-    global mail_filter
     global lowercase
     global skipdisabled
     lowercase = args['--lowercase']
@@ -556,9 +553,6 @@ Options:
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
         dn_filter = "(&(objectClass=posixAccount)(uid=%s))"
-        sn_filter = "(&(objectClass=posixAccount)(uid=%s))"
-        givenName_filter = "(&(objectClass=posixAccount)(uid=%s))"
-        mail_filter = "(&(objectClass=posixAccount)(uid=%s))"
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
     zabbix_conn.connect()
 
