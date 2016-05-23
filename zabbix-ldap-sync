@@ -489,13 +489,20 @@ class ZabbixLDAPConf(object):
             self.ldap_user    = parser.get('ldap', 'binduser')
             self.ldap_pass    = parser.get('ldap', 'bindpass')
             try:
+                # Get 'mail' attribute
                 self.ldap_mail = parser.get('ldap', 'mail')
-            except ConfigParser.NoOptionError :
+            except ConfigParser.NoOptionError:
+                # If not exists, set default 'mail' attribute
                 self.ldap_mail = 'mail'
             self.zbx_server   = parser.get('zabbix', 'server')
             self.zbx_username = parser.get('zabbix', 'username')
             self.zbx_password = parser.get('zabbix', 'password')
-            self.user_opt = parser.items('user')
+            try:
+                # Get user options
+                self.user_opt = parser.items('user')
+            except ConfigParser.NoSectionError:
+                # If not exists, set to empty list
+                self.user_opt = {}
         except ConfigParser.NoOptionError as e:
             raise SystemExit, 'Configuration issues detected in %s' % self.config
 
