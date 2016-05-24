@@ -256,14 +256,20 @@ class ZabbixConn(object):
         self.username = username
         self.password = password
 
-    def connect(self):
+    def connect(self, nocheckcertificate):
         """
         Establishes a connection to the Zabbix server
+
+        Args:
+            nocheckcertificate (bool): Don't check the server certificate
 
         Raises:
             SystemExit
 
         """
+        if nocheckcertificate:
+            self.conn.session.verify = False
+
         self.conn = ZabbixAPI(self.server)
 
         try:
@@ -534,7 +540,7 @@ class ZabbixLDAPConf(object):
 
 def main():
     usage="""
-Usage: zabbix-ldap-sync [-lds] -f <config>
+Usage: zabbix-ldap-sync [-ldsn] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -544,6 +550,7 @@ Options:
   -l, --lowercase               Create AD user names as lowercase
   -s, --skip-disabled           Skip disabled AD users
   -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
+  -n, --no-check-certificate    Don't check Zabbix server certificate
   -f <config>, --file <config>  Configuration file to use
 
 """
@@ -562,9 +569,11 @@ Options:
     global lowercase
     global skipdisabled
     global deleteorphans
+    global nocheckcertificate
     lowercase = args['--lowercase']
     skipdisabled = args['--skip-disabled']
     deleteorphans = args['--delete-orphans']
+    nocheckcertificate = args['--no-check-certificate']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
         group_filter = "(&(objectClass=group)(name=%s))"
@@ -577,7 +586,7 @@ Options:
         group_member_attribute = "memberUid"
         dn_filter = "(&(objectClass=posixAccount)(uid=%s))"
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
-    zabbix_conn.connect()
+    zabbix_conn.connect(nocheckcertificate)
 
     zabbix_conn.create_missing_groups(config.ldap_groups)
     zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups, config.ldap_user, config.ldap_pass, config.ldap_mail, config.user_opt)
