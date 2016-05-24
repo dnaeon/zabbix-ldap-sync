@@ -291,6 +291,26 @@ class ZabbixConn(object):
 
         return users
 
+    def get_mediatype_id(self, description):
+        """
+        Retrieves the mediatypeid by description
+
+        Args:
+            description (str): Zabbix media type description
+
+        Returns:
+            The mediatypeid for specified media type description
+
+        """
+        result = self.conn.mediatype.get(filter={'description':description})
+
+        if result:
+            mediatypeid = result[0]['mediatypeid']
+        else:
+            mediatypeid = None
+
+        return mediatypeid
+
     def get_user_id(self, user):
         """
         Retrieves the userid of a specified user
@@ -415,8 +435,12 @@ class ZabbixConn(object):
         """
 
         userid = self.get_user_id(user)
+        mediatypeid = self.get_mediatype_id('Email')
 
-        result = self.conn.user.addmedia(users=[ { "userid": str(userid) } ], medias={ 'mediatypeid': '1', 'sendto': mail, 'active': '0', 'severity': '63', 'period': '1-7,00:00-24:00' })
+        if mediatypeid:
+            result = self.conn.user.addmedia(users=[ { "userid": str(userid) } ], medias={ 'mediatypeid': mediatypeid, 'sendto': mail, 'active': '0', 'severity': '63', 'period': '1-7,00:00-24:00' })
+        else:
+            result = None
 
         return result
 
