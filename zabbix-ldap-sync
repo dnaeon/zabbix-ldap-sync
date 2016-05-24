@@ -370,6 +370,20 @@ class ZabbixConn(object):
 
         return result
 
+    def delete_user(self, user):
+        """
+        Deletes Zabbix user
+
+        Args:
+            user (string): Zabbix username
+
+        """
+        userid = self.get_user_id(user)
+
+        result = self.conn.user.delete(userid)
+
+        return result
+
     def update_user(self, user, groupid):
         """
         Adds an existing Zabbix user to a group
@@ -428,7 +442,8 @@ class ZabbixConn(object):
         for eachGroup in ldap_groups:
             ldap_users = ldap_conn.get_group_members(eachGroup)
 
-            if not ldap_users:
+            # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
+            if not ldap_users and not deleteorphans:
                 continue
 
             zabbix_grpid = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
@@ -457,12 +472,17 @@ class ZabbixConn(object):
                     print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
                     self.update_user(eachUser, zabbix_grpid)
 
-            # Just mention any extra users in the groups, do not remove them
+            # Handle any extra users in the groups
             extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
             if extra_users:
                 print '>>> Users in group %s which are not found in LDAP group:' % eachGroup
+
                 for eachUser in extra_users:
-                    print ' * %s' % eachUser
+                    if deleteorphans:
+                        print 'Deleting user: %s' % eachUser
+                        self.delete_user(eachUser)
+                    else:
+                        print ' * %s' % eachUser
 
         ldap_conn.disconnect()
 
@@ -514,7 +534,7 @@ class ZabbixLDAPConf(object):
 
 def main():
     usage="""
-Usage: zabbix-ldap-sync [-ls] -f <config>
+Usage: zabbix-ldap-sync [-lds] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -523,6 +543,7 @@ Options:
   -v, --version                 Display version and exit
   -l, --lowercase               Create AD user names as lowercase
   -s, --skip-disabled           Skip disabled AD users
+  -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
   -f <config>, --file <config>  Configuration file to use
 
 """
@@ -540,8 +561,10 @@ Options:
     global dn_filter
     global lowercase
     global skipdisabled
+    global deleteorphans
     lowercase = args['--lowercase']
     skipdisabled = args['--skip-disabled']
+    deleteorphans = args['--delete-orphans']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
         group_filter = "(&(objectClass=group)(name=%s))"
