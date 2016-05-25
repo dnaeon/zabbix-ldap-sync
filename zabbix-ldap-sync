@@ -156,19 +156,19 @@ class LDAPConn(object):
             
             return final_listing
 
-    def get_user_email(self, dn, ldap_mail):
+    def get_user_media(self, dn, ldap_media):
         """
         Retrieves the 'mail' attribute of an LDAP user
 
         Args:
             username (str): The LDAP distinguished name to lookup
-            ldap_mail (str): The name of the field containing the mail address
+            ldap_media (str): The name of the field containing the media address
 
         Returns:
             The user's mail attribute
 
         """
-        attrlist = [ldap_mail]
+        attrlist = [ldap_media]
 
         result = self.conn.search_s(base = dn,
                                     scope = ldap.SCOPE_BASE,
@@ -179,7 +179,7 @@ class LDAPConn(object):
 
         dn, data = result.pop()
 
-        mail = data.get(ldap_mail)
+        mail = data.get(ldap_media)
 
         if not mail:
             return None
@@ -382,8 +382,9 @@ class ZabbixConn(object):
         Creates a new Zabbix user
 
         Args:
-            user    (dict): A dict containing the user details
-            groupid  (int): The groupid for the new user
+            user     (dict): A dict containing the user details
+            groupid   (int): The groupid for the new user
+            user_opt (dict): User options
 
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
@@ -425,20 +426,26 @@ class ZabbixConn(object):
 
         return result
 
-    def update_media(self, user, mail):
+    def update_media(self, user, description, sendto, media_opt):
         """
-        Adds media (email) to an existing Zabbix user
+        Adds media to an existing Zabbix user
 
         Args:
-            user    (dict): A dict containing the user details
+            user        (dict): A dict containing the user details
+            description  (str): A string containing Zabbix media description
+            sendto       (str): A string containing address, phone number, etc...
+            media_opt    (dict): Media options
 
         """
 
         userid = self.get_user_id(user)
-        mediatypeid = self.get_mediatype_id('Email')
+        mediatypeid = self.get_mediatype_id(description)
 
         if mediatypeid:
-            result = self.conn.user.addmedia(users=[ { "userid": str(userid) } ], medias={ 'mediatypeid': mediatypeid, 'sendto': mail, 'active': '0', 'severity': '63', 'period': '1-7,00:00-24:00' })
+            media_defaults = { 'mediatypeid': mediatypeid, 'sendto': sendto , 'active': '0', 'severity': '63', 'period': '1-7,00:00-24:00' }
+            media_defaults.update(media_opt)
+
+            result = self.conn.user.addmedia(users=[ { "userid": str(userid) } ], medias = media_defaults)
         else:
             result = None
 
@@ -459,7 +466,7 @@ class ZabbixConn(object):
             grpid = self.create_group(eachGroup)
             print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
 
-    def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass, ldap_mail, zabbix_user_opt):
+    def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass, ldap_media, user_opt, media_description, media_opt):
         """
         Syncs Zabbix with LDAP users
 
@@ -491,12 +498,12 @@ class ZabbixConn(object):
                     user = { 'alias': eachUser }
                     user['name'] = ldap_conn.get_user_givenName(ldap_users[eachUser])
                     user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
-                    self.create_user(user, zabbix_grpid, zabbix_user_opt)
+                    self.create_user(user, zabbix_grpid, user_opt)
                     zabbix_all_users.append(eachUser)
-                    print '>>> Updating user media for %s, adding email' % eachUser
-                    mailaddress = ldap_conn.get_user_email(ldap_users[eachUser], ldap_mail)
-                    if mailaddress:
-                        self.update_media(eachUser, mailaddress)
+                    print '>>> Updating user media for %s, adding %s' % (eachUser, media_description)
+                    sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
+                    if sendto:
+                        self.update_media(eachUser, media_description, sendto, media_opt)
                 else:
                     # Update existing user to be member of the group
                     print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
@@ -526,6 +533,64 @@ class ZabbixLDAPConf(object):
     def __init__(self, config):
         self.config = config
 
+    def try_get_item(self, parser, section, option, default):
+        """
+        Gets config item
+
+        Args:
+            parser  (ConfigParser): ConfigParser
+            section          (str): Config section name
+            option           (str): Config option name
+            default               : Value to return if item doesn't exist
+
+        Returns:
+            Config item value or default value
+
+        """
+
+        try:
+            result = parser.get(section, option)
+        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
+            result = default
+
+        return result
+
+    def try_get_section(self, parser, section, default):
+        """
+        Gets config section
+
+        Args:
+            parser  (ConfigParser): ConfigParser
+            section          (str): Config section name
+            default               : Value to return if section doesn't exist
+
+        Returns:
+            Config section dict or default value
+
+        """
+
+        try:
+            result = parser.items(section)
+        except ConfigParser.NoSectionError:
+            result = default
+
+        return result
+
+    def remove_config_section_items(self, section, items):
+        """
+        Removes items from config section
+
+        Args:
+            section     (dict of tuples): Config section
+            items                 (list): Item names to remove
+
+        Returns:
+            Config section without specified items
+
+        """
+
+        return [i for i in section if i[0] not in items]
+
     def load_config(self):
         """
         Loads the configuration file
@@ -538,37 +603,27 @@ class ZabbixLDAPConf(object):
         parser.read(self.config)
 
         try:
-            self.ldap_uri     = parser.get('ldap', 'uri')
-            self.ldap_base    = parser.get('ldap', 'base')
-            self.ldap_groups  = [i.strip() for i in parser.get('ldap', 'groups').split(',')]
+            self.ldap_type        = self.try_get_item(parser, 'ldap', 'type', None)
 
-            try:
-                # Get 'ldap_type' attribute
-                self.ldap_type = parser.get('ldap', 'type')
-            except ConfigParser.NoOptionError:
-                # If not exists, set to None
-                self.ldap_type = None
+            self.ldap_uri         = parser.get('ldap', 'uri')
+            self.ldap_base        = parser.get('ldap', 'base')
 
-            self.ldap_user    = parser.get('ldap', 'binduser')
-            self.ldap_pass    = parser.get('ldap', 'bindpass')
+            self.ldap_groups      = [i.strip() for i in parser.get('ldap', 'groups').split(',')]
 
-            try:
-                # Get 'mail' attribute
-                self.ldap_mail = parser.get('ldap', 'mail')
-            except ConfigParser.NoOptionError:
-                # If not exists, set default 'mail' attribute
-                self.ldap_mail = 'mail'
+            self.ldap_user        = parser.get('ldap', 'binduser')
+            self.ldap_pass        = parser.get('ldap', 'bindpass')
 
-            self.zbx_server   = parser.get('zabbix', 'server')
-            self.zbx_username = parser.get('zabbix', 'username')
-            self.zbx_password = parser.get('zabbix', 'password')
+            self.ldap_media       = self.try_get_item(parser, 'ldap', 'media', 'mail')
 
-            try:
-                # Get user options
-                self.user_opt = parser.items('user')
-            except ConfigParser.NoSectionError:
-                # If not exists, set to empty list
-                self.user_opt = {}
+            self.zbx_server       = parser.get('zabbix', 'server')
+            self.zbx_username     = parser.get('zabbix', 'username')
+            self.zbx_password     = parser.get('zabbix', 'password')
+
+            self.user_opt         = self.try_get_section(parser, 'user', {})
+
+            self.media_desciption = self.try_get_item(parser, 'media', 'desciption', 'Email')
+            self.media_opt        = self.remove_config_section_items(self.try_get_section(parser, 'media', {}),
+                                                   ('description', 'userid'))
 
         except ConfigParser.NoOptionError as e:
             raise SystemExit, 'Configuration issues detected in %s' % self.config
@@ -624,7 +679,15 @@ Options:
     zabbix_conn.connect(nocheckcertificate)
 
     zabbix_conn.create_missing_groups(config.ldap_groups)
-    zabbix_conn.sync_users(config.ldap_uri, config.ldap_base, config.ldap_groups, config.ldap_user, config.ldap_pass, config.ldap_mail, config.user_opt)
+    zabbix_conn.sync_users(config.ldap_uri,
+                           config.ldap_base,
+                           config.ldap_groups,
+                           config.ldap_user,
+                           config.ldap_pass,
+                           config.ldap_media,
+                           config.user_opt,
+                           config.media_desciption,
+                           config.media_opt)
 
 if __name__ == '__main__':
     main()
