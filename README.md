@@ -47,7 +47,7 @@ Allows to override media type (`Email`, `Jabber`, `SMS`, etc...) and various pro
 You can configure additional properties in this section. See [Media object](https://www.zabbix.com/documentation/3.2/manual/api/reference/usermedia/object#media) in Zabbix API documentation for available properties. If this section/property doesn't exist, defaults fro additional properties are:
 
 * `active = 0` - Whether the media is enabled. Possible values: `0`- enabled; `1` - disabled.
-* `period =` 1-7,00:00-24:00` - Time when the notifications can be sent as a [time period](https://www.zabbix.com/documentation/3.2/manual/appendix/time_period).
+* `period = 1-7,00:00-24:00` - Time when the notifications can be sent as a [time period](https://www.zabbix.com/documentation/3.2/manual/appendix/time_period).
 * `severity = 63` - Decimal value of trigger severities to send notifications about. Each severity value occupies a position of a 6-bit value. Use this table to calculate decimal representation:
 
 ```
