@@ -23,7 +23,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 
 #### [ldap]
 * `uri` - URI of the LDAP server, including port
-* `base` - Base `Distinguished Name`.
+* `base` - Base `Distinguished Name`
 * `binduser` - LDAP user which has permissions to perform LDAP search
 * `bindpass` - Password for LDAP user
 * `groups` - LDAP groups to sync with Zabbix
@@ -37,10 +37,10 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 #### [user]
 Allows to override various properties for Zabbix users created by script. See [User object](https://www.zabbix.com/documentation/3.2/manual/api/reference/user/object) in Zabbix API documentation for available properties. If section/property doesn't exist, defaults are:
 
-* `type = 1` - user type (`Zabbix user`) 
+ * `type = 1` - User type. Possible values: `1` - (default) Zabbix user; `2` - Zabbix admin; `3` - Zabbix super admin. 
 
 #### [media]
-Allows to override media type (`Email`, `Jabber`, `SMS`, etc...) and various properties for Zabbix media for users created by script.
+Allows to override media type and various properties for Zabbix media for users created by script.
 
 * `decription` - Description of Zabbix media (`Email`, `Jabber`, `SMS`, etc...). This entry is optional, default value is `Email`.
 
