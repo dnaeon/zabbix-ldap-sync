@@ -581,7 +581,7 @@ class ZabbixLDAPConf(object):
         Removes items from config section
 
         Args:
-            section     (dict of tuples): Config section
+            section     (list of tuples): Config section
             items                 (list): Item names to remove
 
         Returns:
