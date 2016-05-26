@@ -659,7 +659,6 @@ Options:
     global lowercase
     global skipdisabled
     global deleteorphans
-    global nocheckcertificate
     lowercase = args['--lowercase']
     skipdisabled = args['--skip-disabled']
     deleteorphans = args['--delete-orphans']
