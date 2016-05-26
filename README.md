@@ -82,7 +82,7 @@ You can configure additional properties in this section. See [Media object](http
     autologin = 1
     
     [media]
-    description = 'Email'
+    description = Email
     active = 0
     period = 1-5,07:00-22:00
     severity = 63
