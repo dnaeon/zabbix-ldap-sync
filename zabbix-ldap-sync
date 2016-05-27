@@ -62,7 +62,7 @@ class LDAPConn(object):
 
         """
         self.conn = ldap.initialize(self.uri)
-        self.conn.set_option(ldap.OPT_REFERRALS, 0)
+        self.conn.set_option(ldap.OPT_REFERRALS, ldap.OPT_OFF)
 
         try:
             self.conn.simple_bind(self.ldap_user, self.ldap_pass)
