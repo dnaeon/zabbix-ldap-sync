@@ -102,6 +102,8 @@ class LDAPConn(object):
         # Get DN for each user in the group
         if active_directory:
 
+            result = [i for i in result if i[0] != None]
+
             final_listing = {}
 
             for members in result:
