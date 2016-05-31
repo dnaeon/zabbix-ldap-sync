@@ -191,14 +191,14 @@ class LDAPConn(object):
 
     def get_user_media(self, dn, ldap_media):
         """
-        Retrieves the 'mail' attribute of an LDAP user
+        Retrieves the 'media' attribute of an LDAP user
 
         Args:
             username (str): The LDAP distinguished name to lookup
             ldap_media (str): The name of the field containing the media address
 
         Returns:
-            The user's mail attribute
+            The user's media attribute value
 
         """
         attrlist = [ldap_media]
