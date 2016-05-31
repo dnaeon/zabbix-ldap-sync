@@ -76,6 +76,13 @@ class LDAPConn(object):
         """
         self.conn.unbind()
 
+    def remove_ad_referrals(self, result):
+        """
+        Remove referrals from AD query result
+
+        """
+        return [i for i in result if i[0] != None]
+
     def get_group_members(self, group):
         """
         Retrieves the members of an LDAP group
@@ -102,8 +109,7 @@ class LDAPConn(object):
         # Get DN for each user in the group
         if active_directory:
 
-            # Strip AD referrals
-            result = [i for i in result if i[0] != None]
+            result = self.remove_ad_referrals(result)
 
             final_listing = {}
 
@@ -111,34 +117,53 @@ class LDAPConn(object):
                 result_dn = members[0]
                 result_attrs = members[1]
 
-            if "member" in result_attrs:
-                for member in result_attrs["member"]:
-                    attrlist = [uid_attribute]
+            group_members = []
+            attrlist = [uid_attribute]
 
-                    # get the actual LDAP object for each group member
+            if recursive:
+                # Get a DN for all users in a group (recursive)
+                # It's available only on domain controllers with Windows Server 2003 SP2 or later
+
+                member_of_filter_dn = memberof_filter % result_dn
+
+                if skipdisabled:
+                    filter = "(&%s%s%s)" % (user_filter, member_of_filter_dn, disabled_filter)
+                else:
+                    filter = "(&%s%s)" % (user_filter, member_of_filter_dn)
+
+                uid = self.conn.search_s(base=self.base,
+                                         scope=ldap.SCOPE_SUBTREE,
+                                         filterstr=filter,
+                                         attrlist=attrlist)
+
+                for item in self.remove_ad_referrals(uid):
+                    group_members.append(item)
+            else:
+                # Otherwise, just get a DN for each user in the group
+                for member in result_attrs["member"]:
                     if skipdisabled:
                         filter = "(&%s%s)" % (user_filter, disabled_filter)
-                        uid = self.conn.search_s(base=member,
-                                                 scope=ldap.SCOPE_BASE,
-                                                 filterstr=filter,
-                                                 attrlist=attrlist)
                     else:
-                        filter = "(&%s%s)" % (user_filter, "")
-                        uid = self.conn.search_s(base=member,
-                                                 scope=ldap.SCOPE_BASE,
-                                                 filterstr=filter,
-                                                 attrlist=attrlist)
+                        filter = "(&%s)" % user_filter
 
-                    if uid:
-                        dn, users = uid.pop()
-                        username = users.get(uid_attribute)
+                    uid = self.conn.search_s(base=member,
+                                             scope=ldap.SCOPE_BASE,
+                                             filterstr=filter,
+                                             attrlist=attrlist)
+                    for item in uid:
+                        group_members.append(item)
 
-                        if lowercase:
-                            username = str(username)[2: -2].lower()
-                        else:
-                            username = str(username)[2: -2]
+            # Fill dictionary with usernames and corresponding DNs
+            for item in group_members:
+                dn = item[0]
+                username = item[1][uid_attribute]
 
-                        final_listing[username] = dn
+                if lowercase:
+                    username = str(username)[2: -2].lower()
+                else:
+                    username = str(username)[2: -2]
+
+                final_listing[username] = dn
 
             return final_listing
 
@@ -647,7 +672,7 @@ class ZabbixLDAPConf(object):
 
 def main():
     usage = """
-Usage: zabbix-ldap-sync [-ldsn] -f <config>
+Usage: zabbix-ldap-sync [-lsrdn] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -656,6 +681,7 @@ Options:
   -v, --version                 Display version and exit
   -l, --lowercase               Create AD user names as lowercase
   -s, --skip-disabled           Skip disabled AD users
+  -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
   -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
   -n, --no-check-certificate    Don't check Zabbix server certificate
   -f <config>, --file <config>  Configuration file to use
@@ -672,6 +698,7 @@ Options:
     global disabled_filter
     global dn_filter
     global user_filter
+    global memberof_filter
     global group_member_attribute
     global uid_attribute
     global lowercase
@@ -682,11 +709,13 @@ Options:
     skipdisabled = args['--skip-disabled']
     deleteorphans = args['--delete-orphans']
     nocheckcertificate = args['--no-check-certificate']
+    recursive = args['--recursive']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
         group_filter = "(&(objectClass=group)(name=%s))"
         user_filter = "(objectClass=user)(objectCategory=Person)"
         disabled_filter = "(!(userAccountControl:1.2.840.113556.1.4.803:=2))"
+        memberof_filter = "(memberOf:1.2.840.113556.1.4.1941:=%s)"
         group_member_attribute = "member"
         uid_attribute = "sAMAccountName"
     else:
