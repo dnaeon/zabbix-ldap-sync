@@ -90,7 +90,7 @@ You can configure additional properties in this section. See [Media object](http
 
 ## Command-line arguments
 
-    Usage: zabbix-ldap-sync [-ldsn] -f <config>
+    Usage: zabbix-ldap-sync [-lsrdn] -f <config>
            zabbix-ldap-sync -v
            zabbix-ldap-sync -h
     
@@ -99,6 +99,7 @@ You can configure additional properties in this section. See [Media object](http
       -v, --version                 Display version and exit
       -l, --lowercase               Create AD user names as lowercase
       -s, --skip-disabled           Skip disabled AD users
+      -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
       -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
       -n, --no-check-certificate    Don't check Zabbix server certificate
       -f <config>, --file <config>  Configuration file to use
