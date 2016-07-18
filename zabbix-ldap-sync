@@ -35,7 +35,7 @@ import ConfigParser
 import sys
 import ldap
 import ldap.filter
-from pyzabbix import ZabbixAPI
+from pyzabbix import ZabbixAPI, ZabbixAPIException
 from docopt import docopt
 
 
@@ -189,6 +189,31 @@ class LDAPConn(object):
 
             return final_listing
 
+    def get_groups_with_wildcard(self, groups_wildcard):
+        print(">>> Search group with wildcard: %s"% groups_wildcard)
+
+        filter = group_filter % groups_wildcard
+        result_groups=[]
+
+        result = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=filter,)
+
+        for group in result:
+            # Skip refldap (when Active Directory used)
+            # [0]==None
+            if group[0]:
+                group_name=group[1]['name'][0]
+                print("Find group %s" % group_name)
+                result_groups.append(group_name)
+
+        if not result_groups:
+            print('>>> Unable to find group %s, skipping group wildcard' % groups_wildcard)
+
+        return result_groups
+
+
+
     def get_user_media(self, dn, ldap_media):
         """
         Retrieves the 'media' attribute of an LDAP user
@@ -302,14 +327,15 @@ class ZabbixConn(object):
             SystemExit
 
         """
-        if nocheckcertificate:
-            self.conn.session.verify = False
 
         self.conn = ZabbixAPI(self.server)
 
+        if nocheckcertificate:
+            self.conn.session.verify = False
+
         try:
             self.conn.login(self.username, self.password)
-        except ZabbixAPI.ZabbixAPIException as e:
+        except ZabbixAPIException as e:
             raise SystemExit('Cannot login to Zabbix server: %s' % e)
 
     def get_users(self):
@@ -669,10 +695,28 @@ class ZabbixLDAPConf(object):
         except ConfigParser.NoOptionError as e:
             raise SystemExit('Configuration issues detected in %s' % self.config)
 
+    def set_groups_with_wildcard(self):
+        """
+        Set group from LDAP with wildcard
+        :return:
+        """
+        result_groups=[]
+        ldap_conn = LDAPConn(self.ldap_uri, self.ldap_base, self.ldap_user, self.ldap_pass)
+        ldap_conn.connect()
+
+        for group in self.ldap_groups:
+            groups = ldap_conn.get_groups_with_wildcard(group)
+            result_groups = result_groups + groups
+
+        if result_groups:
+            self.ldap_groups = result_groups
+        else:
+            raise SystemExit('ERROR - No groups found with wildcard' )
+
 
 def main():
     usage = """
-Usage: zabbix-ldap-sync [-lsrdn] -f <config>
+Usage: zabbix-ldap-sync [-lsrwdn] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -682,6 +726,7 @@ Options:
   -l, --lowercase               Create AD user names as lowercase
   -s, --skip-disabled           Skip disabled AD users
   -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
+  -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*)
   -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
   -n, --no-check-certificate    Don't check Zabbix server certificate
   -f <config>, --file <config>  Configuration file to use
@@ -691,6 +736,7 @@ Options:
 
     config = ZabbixLDAPConf(args['--file'])
     config.load_config()
+
 
     # set up AD differences, if necessary
     global active_directory
@@ -723,6 +769,15 @@ Options:
         group_filter = "(&(objectClass=posixGroup)(cn=%s))"
         group_member_attribute = "memberUid"
         dn_filter = "(&(objectClass=posixAccount)(uid=%s))"
+
+    wildcard_search = args['--wildcard-search']
+    if wildcard_search:
+        config.set_groups_with_wildcard()
+
+    if nocheckcertificate:
+        from requests.packages.urllib3 import disable_warnings
+        disable_warnings()
+
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
     zabbix_conn.connect(nocheckcertificate)
 
