@@ -726,7 +726,7 @@ Options:
   -l, --lowercase               Create AD user names as lowercase
   -s, --skip-disabled           Skip disabled AD users
   -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
-  -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*)
+  -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*) - TESTED ONLY with Active Directory
   -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
   -n, --no-check-certificate    Don't check Zabbix server certificate
   -f <config>, --file <config>  Configuration file to use
