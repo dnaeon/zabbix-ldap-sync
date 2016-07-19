@@ -26,7 +26,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `base` - Base `Distinguished Name`
 * `binduser` - LDAP user which has permissions to perform LDAP search
 * `bindpass` - Password for LDAP user
-* `groups` - LDAP groups to sync with Zabbix
+* `groups` - LDAP groups to sync with Zabbix (support wildcard - TESTED ONLY with Active Directory, see Command-line arguments)
 * `media` - Name of the LDAP attribute of user object, that will be used to set `Send to` property of Zabbix user media. This entry is optional, default value is `mail`.
 
 #### [zabbix]
@@ -90,7 +90,7 @@ You can configure additional properties in this section. See [Media object](http
 
 ## Command-line arguments
 
-    Usage: zabbix-ldap-sync [-lsrdn] -f <config>
+    Usage: zabbix-ldap-sync [-lsrwdn] -f <config>
            zabbix-ldap-sync -v
            zabbix-ldap-sync -h
     
@@ -100,6 +100,7 @@ You can configure additional properties in this section. See [Media object](http
       -l, --lowercase               Create AD user names as lowercase
       -s, --skip-disabled           Skip disabled AD users
       -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
+      -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*) - TESTED ONLY with Active Directory
       -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
       -n, --no-check-certificate    Don't check Zabbix server certificate
       -f <config>, --file <config>  Configuration file to use
