@@ -65,7 +65,7 @@ class LDAPConn(object):
         self.conn.set_option(ldap.OPT_REFERRALS, ldap.OPT_OFF)
 
         try:
-            self.conn.simple_bind(self.ldap_user, self.ldap_pass)
+            self.conn.simple_bind_s(self.ldap_user, self.ldap_pass)
         except ldap.SERVER_DOWN as e:
             raise SystemExit('Cannot connect to LDAP server: %s' % e)
 
