@@ -1,5 +1,5 @@
 #
-# spec file for package python-docopt
+# spec file for package zabbix-ldap-sync
 #
 # Copyright (c) 2016 SUSE LINUX GmbH, Nuernberg, Germany.
 #
@@ -21,7 +21,7 @@ Version:        0.1
 Release:        1
 Url:            https://github.com/dnaeon/zabbix-ldap-sync
 Summary:        Sync your Zabbix users with LDAP directory server
-License:        LGPL
+License:        BSD
 Group:          Productivity
 Source:         https://github.com/dnaeon/zabbix-ldap-sync/archive/master.zip
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
