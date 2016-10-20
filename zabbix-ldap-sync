@@ -173,8 +173,15 @@ class LDAPConn(object):
 
             final_listing = {}
 
-            # Get DN for each user in the group
+	    # Get DN for each user in the group
             for uid in users[group_member_attribute]:
+
+                if openldap_type == "groupofnames":
+
+                  uid = uid.split('=', 2 )
+                  uid = uid[1].split(',', 1 )
+                  uid = uid[0]
+
                 filter = dn_filter % uid
                 attrlist = ['']
 
@@ -683,6 +690,18 @@ class ZabbixLDAPConf(object):
 
             self.ldap_media         = self.try_get_item(parser, 'ldap', 'media', 'mail')
 
+            self.ad_filtergroup = parser.get ('ad', 'filtergroup','(&(objectClass=group)(name=%s))')
+            self.ad_filteruser = parser.get ('ad','filteruser', '(objectClass=user)(objectCategory=Person))')
+            self.ad_filterdisabled = parser.get ('ad', 'filterdisabled','(!(userAccountControl:1.2.840.113556.1.4.803:=2))')
+            self.ad_filtermemberof = parser.get ('ad', 'filtermemberof','(memberOf:1.2.840.113556.1.4.1941:=%s)')
+            self.ad_groupattribute = parser.get ('ad', 'groupattribute','member')
+            self.ad_userattribute = parser.get ('ad', 'userattribute','sAMAccountName')
+
+            self.openldap_type = parser.get ('openldap', 'type','posixgroup')
+            self.openldap_filtergroup = parser.get ('openldap', 'filtergroup','(&(objectClass=posixGroup)(cn=%s))')
+            self.openldap_filteruser = parser.get ('openldap', 'filteruser','(&(objectClass=posixAccount)(uid=%s))')
+            self.openldap_groupattribute = parser.get ('openldap', 'groupattribute','memberUid')
+
             self.zbx_server         = parser.get('zabbix', 'server')
             self.zbx_username       = parser.get('zabbix', 'username')
             self.zbx_password       = parser.get('zabbix', 'password')
@@ -740,6 +759,7 @@ Options:
 
     # set up AD differences, if necessary
     global active_directory
+    global openldap_type
     global group_filter
     global disabled_filter
     global dn_filter
@@ -758,17 +778,18 @@ Options:
     recursive = args['--recursive']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
-        group_filter = "(&(objectClass=group)(name=%s))"
-        user_filter = "(objectClass=user)(objectCategory=Person)"
-        disabled_filter = "(!(userAccountControl:1.2.840.113556.1.4.803:=2))"
-        memberof_filter = "(memberOf:1.2.840.113556.1.4.1941:=%s)"
-        group_member_attribute = "member"
-        uid_attribute = "sAMAccountName"
+        group_filter = config.ad_filtergroup
+        user_filter = config.ad_filteruser
+        disabled_filter = config.ad_filterdisabled
+        memberof_filter = config.ad_filtermemberof
+        group_member_attribute = config.ad_groupattribute
+        uid_attribute = config.ad_userattribute
     else:
         active_directory = None
-        group_filter = "(&(objectClass=posixGroup)(cn=%s))"
-        group_member_attribute = "memberUid"
-        dn_filter = "(&(objectClass=posixAccount)(uid=%s))"
+        openldap_type = config.openldap_type
+        group_filter = config.openldap_filtergroup
+        group_member_attribute = config.openldap_groupattribute
+        dn_filter = config.openldap_filteruser
 
     wildcard_search = args['--wildcard-search']
     if wildcard_search:
