@@ -14,8 +14,8 @@ Source:         https://github.com/dnaeon/zabbix-ldap-sync/archive/master.zip
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:      noarch
 Requires:       python-ldap
-Requires:       pyzabbix >= 0.7.4
-Requires:       docopt >= 0.6.2
+Requires:       python-pyzabbix >= 0.7.4
+Requires:       python-docopt >= 0.6.2
 
 %description
 The zabbix-ldap-sync script is used for keeping your Zabbix users in 
@@ -33,7 +33,7 @@ Tested against Zabbix 3.0.
 mkdir -p %{buildroot}%{_sbindir}
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}
 
-cp %{name} %{buildroot}%{_datadir}/usr/sbin
+cp %{name} %{buildroot}%{_sbindir}
 cp zabbix-ldap.conf %{buildroot}%{_sysconfdir}/%{name}/
 
 %files
