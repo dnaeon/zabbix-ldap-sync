@@ -33,7 +33,7 @@ Tested against Zabbix 3.0.
 mkdir -p %{buildroot}%{_sbindir}
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}
 
-cp %{name} %{buildroot}%{_datadir}/usr/sbin
+cp %{name} %{buildroot}%{_sbindir}
 cp zabbix-ldap.conf %{buildroot}%{_sysconfdir}/%{name}/
 
 %files
