@@ -689,7 +689,7 @@ class ZabbixLDAPConf(object):
 
             self.user_opt           = self.try_get_section(parser, 'user', {})
 
-            self.media_desciption   = self.try_get_item(parser, 'media', 'description', 'Email')
+            self.media_description   = self.try_get_item(parser, 'media', 'description', 'Email')
             self.media_opt          = self.remove_config_section_items(self.try_get_section(parser, 'media', {}), ('description', 'userid'))
 
         except ConfigParser.NoOptionError as e:
@@ -789,7 +789,7 @@ Options:
                            config.ldap_pass,
                            config.ldap_media,
                            config.user_opt,
-                           config.media_desciption,
+                           config.media_description,
                            config.media_opt)
 
 if __name__ == '__main__':
