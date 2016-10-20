@@ -22,12 +22,27 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 ### Config file sections
 
 #### [ldap]
+* `type` - Select type of ldap server, can be `activedirectory` or `openldap`
 * `uri` - URI of the LDAP server, including port
 * `base` - Base `Distinguished Name`
 * `binduser` - LDAP user which has permissions to perform LDAP search
 * `bindpass` - Password for LDAP user
 * `groups` - LDAP groups to sync with Zabbix (support wildcard - TESTED ONLY with Active Directory, see Command-line arguments)
 * `media` - Name of the LDAP attribute of user object, that will be used to set `Send to` property of Zabbix user media. This entry is optional, default value is `mail`.
+
+[ad]
+* `filtergroup` = The ldap filter to get group in ActiveDirectory mode, by default `(&(objectClass=group)(name=%s))`
+* `filteruser` = The ldap filter to get the users in ActiveDirectory mode, by default `(objectClass=user)(objectCategory=Person)`
+* `filterdisabled` = The filter to get the disabled user in ActiveDirectory mode, by default `(!(userAccountControl:1.2.840.113556.1.4.803:=2))`
+* `filtermemberof` = The filter to get memberof in ActiveDirectory mode, by default `(memberOf:1.2.840.113556.1.4.1941:=%s)`
+* `groupattribute` = The attribute used for membership in a group in ActiveDirectory mode, by default `member`
+* `userattribute` = The attribute for users in ActiveDirectory mode `sAMAccountName`
+
+[openldap]
+* `type` = The storage mode for group and users can be `posix` or `groupofnames` 
+* `filtergroup` = The ldap filter to get group in OpenLDAP mode, by default `(&(objectClass=posixGroup)(cn=%s))`
+* `filteruser` = The ldap filter to get the users in OpenLDAP mode, by default `(&(objectClass=posixAccount)(uid=%s))`
+* `groupattribute` = The attribute used for membership in a group in OpenLDAP mode, by default `memberUid`
 
 #### [zabbix]
 * `server` - Zabbix URL
@@ -70,6 +85,20 @@ You can configure additional properties in this section. See [Media object](http
     bindpass = ldappass
     groups = sysadmins
     media = mail
+
+    [ad]
+    filtergroup = (&(objectClass=group)(name=%s))
+    filteruser = (objectClass=user)(objectCategory=Person)
+    filterdisabled = (!(userAccountControl:1.2.840.113556.1.4.803:=2))
+    filtermemberof = (memberOf:1.2.840.113556.1.4.1941:=%s)
+    groupattribute = member
+    userattribute = sAMAccountName
+
+    [openldap]
+    type = posix
+    filtergroup = (&(objectClass=posixGroup)(cn=%s))
+    filteruser = (&(objectClass=posixAccount)(uid=%s))
+    groupattribute = memberUid
     
     [zabbix]
     server = http://zabbix.example.org/zabbix/
