@@ -182,7 +182,7 @@ class LDAPConn(object):
                   uid = uid[1].split(',', 1 )
                   uid = uid[0]
 
-                filter = dn_filter % uid
+                filter = user_filter % uid
                 attrlist = ['']
 
                 # get the actual LDAP object for each group member
@@ -762,7 +762,6 @@ Options:
     global openldap_type
     global group_filter
     global disabled_filter
-    global dn_filter
     global user_filter
     global memberof_filter
     global group_member_attribute
@@ -788,8 +787,8 @@ Options:
         active_directory = None
         openldap_type = config.openldap_type
         group_filter = config.openldap_filtergroup
+        user_filter = config.openldap_filteruser
         group_member_attribute = config.openldap_groupattribute
-        dn_filter = config.openldap_filteruser
 
     wildcard_search = args['--wildcard-search']
     if wildcard_search:
