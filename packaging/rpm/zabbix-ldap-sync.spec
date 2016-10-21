@@ -38,7 +38,7 @@ cp zabbix-ldap.conf %{buildroot}%{_sysconfdir}/%{name}/
 
 %files
 %defattr(-,root,root,-)
-%doc README.md
+%doc LICENSE README.md
 %config %{_sysconfdir}/%{name}/zabbix-ldap.conf
 %{_sbindir}/%{name}
 
