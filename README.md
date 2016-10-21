@@ -43,6 +43,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `filtergroup` = The ldap filter to get group in OpenLDAP mode, by default `(&(objectClass=posixGroup)(cn=%s))`
 * `filteruser` = The ldap filter to get the users in OpenLDAP mode, by default `(&(objectClass=posixAccount)(uid=%s))`
 * `groupattribute` = The attribute used for membership in a group in OpenLDAP mode, by default `memberUid`
+* `userattribute` = The attribute for users in openldap mode, by default `uid`
 
 #### [zabbix]
 * `server` - Zabbix URL
