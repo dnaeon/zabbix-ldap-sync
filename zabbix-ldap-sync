@@ -140,7 +140,7 @@ class LDAPConn(object):
                     group_members.append(item)
             else:
                 # Otherwise, just get a DN for each user in the group
-                for member in result_attrs["member"]:
+                for member in result_attrs[group_member_attribute]:
                     if skipdisabled:
                         filter = "(&%s%s)" % (user_filter, disabled_filter)
                     else:
