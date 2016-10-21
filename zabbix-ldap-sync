@@ -183,7 +183,7 @@ class LDAPConn(object):
                   uid = uid[0]
 
                 filter = user_filter % uid
-                attrlist = ['']
+                attrlist = [uid_attribute]
 
                 # get the actual LDAP object for each group member
                 user = self.conn.search_s(base=self.base,
@@ -701,6 +701,7 @@ class ZabbixLDAPConf(object):
             self.openldap_filtergroup = parser.get ('openldap', 'filtergroup','(&(objectClass=posixGroup)(cn=%s))')
             self.openldap_filteruser = parser.get ('openldap', 'filteruser','(&(objectClass=posixAccount)(uid=%s))')
             self.openldap_groupattribute = parser.get ('openldap', 'groupattribute','memberUid')
+            self.openldap_userattribute = parser.get ('openldap', 'userattribute','uid')
 
             self.zbx_server         = parser.get('zabbix', 'server')
             self.zbx_username       = parser.get('zabbix', 'username')
@@ -789,6 +790,7 @@ Options:
         group_filter = config.openldap_filtergroup
         user_filter = config.openldap_filteruser
         group_member_attribute = config.openldap_groupattribute
+        uid_attribute = config.openldap_userattribute
 
     wildcard_search = args['--wildcard-search']
     if wildcard_search:
