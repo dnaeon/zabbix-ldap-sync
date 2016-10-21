@@ -140,7 +140,7 @@ class LDAPConn(object):
                     group_members.append(item)
             else:
                 # Otherwise, just get a DN for each user in the group
-                for member in result_attrs["member"]:
+                for member in result_attrs[group_member_attribute]:
                     if skipdisabled:
                         filter = "(&%s%s)" % (user_filter, disabled_filter)
                     else:
@@ -182,8 +182,8 @@ class LDAPConn(object):
                   uid = uid[1].split(',', 1 )
                   uid = uid[0]
 
-                filter = dn_filter % uid
-                attrlist = ['']
+                filter = user_filter % uid
+                attrlist = [uid_attribute]
 
                 # get the actual LDAP object for each group member
                 user = self.conn.search_s(base=self.base,
@@ -701,6 +701,7 @@ class ZabbixLDAPConf(object):
             self.openldap_filtergroup = parser.get ('openldap', 'filtergroup','(&(objectClass=posixGroup)(cn=%s))')
             self.openldap_filteruser = parser.get ('openldap', 'filteruser','(&(objectClass=posixAccount)(uid=%s))')
             self.openldap_groupattribute = parser.get ('openldap', 'groupattribute','memberUid')
+            self.openldap_userattribute = parser.get ('openldap', 'userattribute','uid')
 
             self.zbx_server         = parser.get('zabbix', 'server')
             self.zbx_username       = parser.get('zabbix', 'username')
@@ -762,7 +763,6 @@ Options:
     global openldap_type
     global group_filter
     global disabled_filter
-    global dn_filter
     global user_filter
     global memberof_filter
     global group_member_attribute
@@ -788,8 +788,9 @@ Options:
         active_directory = None
         openldap_type = config.openldap_type
         group_filter = config.openldap_filtergroup
+        user_filter = config.openldap_filteruser
         group_member_attribute = config.openldap_groupattribute
-        dn_filter = config.openldap_filteruser
+        uid_attribute = config.openldap_userattribute
 
     wildcard_search = args['--wildcard-search']
     if wildcard_search:
