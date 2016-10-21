@@ -594,6 +594,14 @@ class ZabbixConn(object):
                     else:
                         print ' * %s' % eachUser
 
+            # update users media
+            for eachUser in zabbix_group_users:
+                print '>>> Updating user media for %s, adding %s' % (eachUser, media_description)
+                sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
+
+                if sendto:
+                    self.update_media(eachUser, media_description, sendto, media_opt)
+
         ldap_conn.disconnect()
 
 
