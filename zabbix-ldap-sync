@@ -573,10 +573,6 @@ class ZabbixConn(object):
                     user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
                     self.create_user(user, zabbix_grpid, user_opt)
                     zabbix_all_users.append(eachUser)
-                    print '>>> Updating user media for %s, adding %s' % (eachUser, media_description)
-                    sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
-                    if sendto:
-                        self.update_media(eachUser, media_description, sendto, media_opt)
                 else:
                     # Update existing user to be member of the group
                     print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
@@ -595,7 +591,7 @@ class ZabbixConn(object):
                         print ' * %s' % eachUser
 
             # update users media
-            for eachUser in zabbix_group_users:
+            for eachUser in set(zabbix_group_users):
                 print '>>> Updating user media for %s, adding %s' % (eachUser, media_description)
                 sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
 
