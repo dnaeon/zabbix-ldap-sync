@@ -31,6 +31,7 @@ The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 
 import random
 import string
+import logging
 import ConfigParser
 import sys
 import ldap
@@ -323,6 +324,23 @@ class ZabbixConn(object):
         self.username = username
         self.password = password
 
+    def verbose(self):
+        # Use logger to log information
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+        # Log to stdout
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)  # Use logger to log information
+
+        # Log from pyzabbix
+        log = logging.getLogger('pyzabbix')
+        log.addHandler(ch)
+        log.setLevel(logging.DEBUG)
+
     def connect(self, nocheckcertificate):
         """
         Establishes a connection to the Zabbix server
@@ -518,11 +536,35 @@ class ZabbixConn(object):
             }
             media_defaults.update(media_opt)
 
+            self.delete_media_by_description(user, description)
             result = self.conn.user.addmedia(users=[{"userid": str(userid)}], medias=media_defaults)
         else:
             result = None
 
         return result
+
+
+    def delete_media_by_description(self, user, description):
+        """
+        Remove all media from user (with specific mediatype)
+
+        Args:
+            user        (dict): A dict containing the user details
+            description  (str): A string containing Zabbix media description
+
+        """
+
+        userid = self.get_user_id(user)
+        mediatypeid = self.get_mediatype_id(description)
+
+        if mediatypeid:
+            user_full = self.conn.user.get(output="extend", userids=userid, selectMedias = ["mediatypeid", "mediaid"])
+            media_ids = [int(u['mediaid']) for u in user_full[0]['medias'] if u['mediatypeid'] == mediatypeid]
+
+            if media_ids:
+                print '>>> Remove other exist media from user %s (type=%s)' % (user, description)
+                for id in media_ids:
+                    self.conn.user.deletemedia(id)
 
     def create_missing_groups(self, ldap_groups):
         """
@@ -573,10 +615,6 @@ class ZabbixConn(object):
                     user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
                     self.create_user(user, zabbix_grpid, user_opt)
                     zabbix_all_users.append(eachUser)
-                    print '>>> Updating user media for %s, adding %s' % (eachUser, media_description)
-                    sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
-                    if sendto:
-                        self.update_media(eachUser, media_description, sendto, media_opt)
                 else:
                     # Update existing user to be member of the group
                     print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
@@ -595,8 +633,8 @@ class ZabbixConn(object):
                         print ' * %s' % eachUser
 
             # update users media
-            for eachUser in zabbix_group_users:
-                print '>>> Updating user media for %s, adding %s' % (eachUser, media_description)
+            for eachUser in set(zabbix_group_users):
+                print '>>> Updating user media for %s, update %s' % (eachUser, media_description)
                 sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
 
                 if sendto:
@@ -744,7 +782,7 @@ class ZabbixLDAPConf(object):
 
 def main():
     usage = """
-Usage: zabbix-ldap-sync [-lsrwdn] -f <config>
+Usage: zabbix-ldap-sync [-lsrwdn] [--verbose] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -757,6 +795,7 @@ Options:
   -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*) - TESTED ONLY with Active Directory
   -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
   -n, --no-check-certificate    Don't check Zabbix server certificate
+  --verbose                     Print debug message from ZabbixAPI
   -f <config>, --file <config>  Configuration file to use
 
 """
@@ -784,6 +823,7 @@ Options:
     deleteorphans = args['--delete-orphans']
     nocheckcertificate = args['--no-check-certificate']
     recursive = args['--recursive']
+    verbose = args['--verbose']
     if config.ldap_type == 'activedirectory':
         active_directory = "true"
         group_filter = config.ad_filtergroup
@@ -809,6 +849,8 @@ Options:
         disable_warnings()
 
     zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
+    if verbose:
+        zabbix_conn.verbose()
     zabbix_conn.connect(nocheckcertificate)
 
     zabbix_conn.create_missing_groups(config.ldap_groups)
