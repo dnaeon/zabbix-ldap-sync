@@ -340,11 +340,6 @@ class ZabbixConn(object):
         log = logging.getLogger('pyzabbix')
         log.addHandler(ch)
         log.setLevel(logging.DEBUG)
-        # ------------ END Setup logging ------------
-
-
-
-
 
     def connect(self, nocheckcertificate):
         """
