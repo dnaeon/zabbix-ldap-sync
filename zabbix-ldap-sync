@@ -633,6 +633,7 @@ class ZabbixConn(object):
                         print ' * %s' % eachUser
 
             # update users media
+            zabbix_group_users = self.get_group_members(zabbix_grpid)
             for eachUser in set(zabbix_group_users):
                 print '>>> Updating user media for %s, update %s' % (eachUser, media_description)
                 sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
