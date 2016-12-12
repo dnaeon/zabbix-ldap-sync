@@ -197,12 +197,16 @@ class LDAPConn(object):
                                           filterstr=filter,
                                           attrlist=attrlist)
 
-                for items in user:
-                  memberid = memberid.split('=', 2 )
-                  memberid = memberid[1].split(',', 1 )
-                  memberid = memberid[0]
+                for item in uid:
+                        group_members.append(item)
 
-                  final_listing[memberid] = items[0]
+                # Fill dictionary with usernames and corresponding DNs
+                for item in group_members:
+                  dn = item[0]
+                  username = item[1][uid_attribute]
+                  user = ''.join(username)
+
+                final_listing[user] = dn
 
             return final_listing
 
