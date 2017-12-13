@@ -26,7 +26,7 @@ Check the official documentation of Zabbix on how to
 ### Setup virtualenv
 
 ```
-apt-get install python-dev virtualenv
+apt-get install python-dev virtualenv libpython3.6-dev libldap2-dev libsasl2-dev
 virtualenv -p python3 env
 source env/bin/activate
 pip install python3-ldap

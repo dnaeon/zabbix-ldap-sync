@@ -28,15 +28,15 @@
 The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 
 """
-
+from pprint import pprint
 import random
 import string
 import logging
 import configparser
 import sys
-import ldap3
+import ldap
+import ldap.filter
 import traceback
-#import ldap3.filter
 from pyzabbix import ZabbixAPI, ZabbixAPIException
 from docopt import docopt
 
@@ -63,12 +63,12 @@ class LDAPConn(object):
             SystemExit
 
         """
-        self.conn = ldap3.initialize(self.uri)
-        self.conn.set_option(ldap3.OPT_REFERRALS, ldap3.OPT_OFF)
+        self.conn = ldap.initialize(self.uri)
+        self.conn.set_option(ldap.OPT_REFERRALS, ldap.OPT_OFF)
 
         try:
             self.conn.simple_bind_s(self.ldap_user, self.ldap_pass)
-        except ldap3.SERVER_DOWN as e:
+        except ldap.SERVER_DOWN as e:
             raise SystemExit('Cannot connect to LDAP server: %s' % e)
 
     def disconnect(self):
@@ -100,13 +100,17 @@ class LDAPConn(object):
         filter = group_filter % group
 
         result = self.conn.search_s(base=self.base,
-                                    scope=ldap3.SCOPE_SUBTREE,
+                                    scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,
                                     attrlist=attrlist)
 
         if not result:
-            print('>>> Unable to find group %s, skipping group' % group)
+            print('>>> Unable to find group "%s" with filter "%s", skipping group' % (group,filter))
             return None
+
+        print("*******************************************")
+        pprint(result)
+        print("*******************************************")
 
         # Get DN for each user in the group
         if active_directory:
@@ -134,9 +138,11 @@ class LDAPConn(object):
                     filter = "(&%s%s)" % (user_filter, member_of_filter_dn)
 
                 uid = self.conn.search_s(base=self.base,
-                                         scope=ldap3.SCOPE_SUBTREE,
+                                         scope=ldap.SCOPE_SUBTREE,
                                          filterstr=filter,
                                          attrlist=attrlist)
+
+
 
                 for item in self.remove_ad_referrals(uid):
                     group_members.append(item)
@@ -149,7 +155,7 @@ class LDAPConn(object):
                         filter = "(&%s)" % user_filter
 
                     uid = self.conn.search_s(base=member,
-                                             scope=ldap3.SCOPE_BASE,
+                                             scope=ldap.SCOPE_BASE,
                                              filterstr=filter,
                                              attrlist=attrlist)
                     for item in uid:
@@ -161,11 +167,12 @@ class LDAPConn(object):
                 username = item[1][uid_attribute]
 
                 if lowercase:
-                    username = str(username)[2: -2].lower()
+                    username = username[0].decode('ascii').lower()
                 else:
-                    username = str(username)[2: -2]
+                    username = username[0].decode('ascii')
 
                 final_listing[username] = dn
+                pprint(dn)
 
             return final_listing
 
@@ -196,7 +203,7 @@ class LDAPConn(object):
 
                 # get the actual LDAP object for each group member
                 uid = self.conn.search_s(base=base,
-                                          scope=ldap3.SCOPE_SUBTREE,
+                                          scope=ldap.SCOPE_SUBTREE,
                                           filterstr=filter,
                                           attrlist=attrlist)
 
@@ -211,6 +218,7 @@ class LDAPConn(object):
 
                 final_listing[user] = dn
 
+
             return final_listing
 
     def get_groups_with_wildcard(self, groups_wildcard):
@@ -220,7 +228,7 @@ class LDAPConn(object):
         result_groups=[]
 
         result = self.conn.search_s(base=self.base,
-                                    scope=ldap3.SCOPE_SUBTREE,
+                                    scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,)
 
         for group in result:
@@ -232,7 +240,7 @@ class LDAPConn(object):
                 result_groups.append(group_name)
 
         if not result_groups:
-            print('>>> Unable to find group %s, skipping group wildcard' % groups_wildcard)
+            print('>>> Unable to find group "%s", skipping group wildcard' % groups_wildcard)
 
         return result_groups
 
@@ -253,7 +261,7 @@ class LDAPConn(object):
         attrlist = [ldap_media]
 
         result = self.conn.search_s(base=dn,
-                                    scope=ldap3.SCOPE_BASE,
+                                    scope=ldap.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -282,7 +290,7 @@ class LDAPConn(object):
         attrlist = ['sn']
 
         result = self.conn.search_s(base=dn,
-                                    scope=ldap3.SCOPE_BASE,
+                                    scope=ldap.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -311,7 +319,7 @@ class LDAPConn(object):
         attrlist = ['givenName']
 
         result = self.conn.search_s(base=dn,
-                                    scope=ldap3.SCOPE_BASE,
+                                    scope=ldap.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -482,7 +490,7 @@ class ZabbixConn(object):
             The groupid of the newly created group
 
         """
-        result = self.conn.usergroup.create(name=group, permission=0)
+        result = self.conn.usergroup.create(name=group)
 
         groupid = result['usrgrpids'].pop()
 
@@ -617,6 +625,7 @@ class ZabbixConn(object):
 
         zabbix_all_users = self.get_users()
 
+
         for eachGroup in ldap_groups:
             ldap_users = ldap_conn.get_group_members(eachGroup)
 
@@ -628,22 +637,31 @@ class ZabbixConn(object):
 
             zabbix_group_users = self.get_group_members(zabbix_grpid)
 
+
+
             missing_users = set(list(ldap_users.keys())) - set(zabbix_group_users)
+
 
             # Add missing users
             for eachUser in missing_users:
 
                 # Create new user if it does not exists already
                 if eachUser not in zabbix_all_users:
-                    print('>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup))
+                    print('>>> Creating user "%s", member of Zabbix group "%s"' % (eachUser, eachGroup))
                     user = {'alias': eachUser}
                     user['name'] = ldap_conn.get_user_givenName(ldap_users[eachUser])
                     user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
+
+                    if user['name'] is None:
+                      user['name'] = ''
+                    if user['surname'] is None:
+                      user['surname'] = ''
+
                     self.create_user(user, zabbix_grpid, user_opt)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
-                    print('>>> Updating user %s, adding to group %s' % (eachUser, eachGroup))
+                    print('>>> Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
                     self.update_user(eachUser, zabbix_grpid)
 
             # Handle any extra users in the groups
@@ -653,7 +671,7 @@ class ZabbixConn(object):
 
                 for eachUser in extra_users:
                     if deleteorphans:
-                        print('Deleting user: %s' % eachUser)
+                        print('Deleting user: "%s"' % eachUser)
                         self.delete_user(eachUser)
                     else:
                         print(' * %s' % eachUser)
@@ -661,7 +679,7 @@ class ZabbixConn(object):
             # update users media
             zabbix_group_users = self.get_group_members(zabbix_grpid)
             for eachUser in set(zabbix_group_users):
-                print('>>> Updating user media for %s, update %s' % (eachUser, media_description))
+                print('>>> Updating user media for "%s", update "%s"' % (eachUser, media_description))
                 sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
 
                 if sendto:
