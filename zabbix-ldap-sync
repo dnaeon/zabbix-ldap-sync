@@ -32,10 +32,11 @@ The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 import random
 import string
 import logging
-import ConfigParser
+import configparser
 import sys
-import ldap
-import ldap.filter
+import ldap3
+import traceback
+#import ldap3.filter
 from pyzabbix import ZabbixAPI, ZabbixAPIException
 from docopt import docopt
 
@@ -62,12 +63,12 @@ class LDAPConn(object):
             SystemExit
 
         """
-        self.conn = ldap.initialize(self.uri)
-        self.conn.set_option(ldap.OPT_REFERRALS, ldap.OPT_OFF)
+        self.conn = ldap3.initialize(self.uri)
+        self.conn.set_option(ldap3.OPT_REFERRALS, ldap3.OPT_OFF)
 
         try:
             self.conn.simple_bind_s(self.ldap_user, self.ldap_pass)
-        except ldap.SERVER_DOWN as e:
+        except ldap3.SERVER_DOWN as e:
             raise SystemExit('Cannot connect to LDAP server: %s' % e)
 
     def disconnect(self):
@@ -99,7 +100,7 @@ class LDAPConn(object):
         filter = group_filter % group
 
         result = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
+                                    scope=ldap3.SCOPE_SUBTREE,
                                     filterstr=filter,
                                     attrlist=attrlist)
 
@@ -133,7 +134,7 @@ class LDAPConn(object):
                     filter = "(&%s%s)" % (user_filter, member_of_filter_dn)
 
                 uid = self.conn.search_s(base=self.base,
-                                         scope=ldap.SCOPE_SUBTREE,
+                                         scope=ldap3.SCOPE_SUBTREE,
                                          filterstr=filter,
                                          attrlist=attrlist)
 
@@ -148,7 +149,7 @@ class LDAPConn(object):
                         filter = "(&%s)" % user_filter
 
                     uid = self.conn.search_s(base=member,
-                                             scope=ldap.SCOPE_BASE,
+                                             scope=ldap3.SCOPE_BASE,
                                              filterstr=filter,
                                              attrlist=attrlist)
                     for item in uid:
@@ -195,7 +196,7 @@ class LDAPConn(object):
 
                 # get the actual LDAP object for each group member
                 uid = self.conn.search_s(base=base,
-                                          scope=ldap.SCOPE_SUBTREE,
+                                          scope=ldap3.SCOPE_SUBTREE,
                                           filterstr=filter,
                                           attrlist=attrlist)
 
@@ -219,7 +220,7 @@ class LDAPConn(object):
         result_groups=[]
 
         result = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
+                                    scope=ldap3.SCOPE_SUBTREE,
                                     filterstr=filter,)
 
         for group in result:
@@ -252,7 +253,7 @@ class LDAPConn(object):
         attrlist = [ldap_media]
 
         result = self.conn.search_s(base=dn,
-                                    scope=ldap.SCOPE_BASE,
+                                    scope=ldap3.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -281,7 +282,7 @@ class LDAPConn(object):
         attrlist = ['sn']
 
         result = self.conn.search_s(base=dn,
-                                    scope=ldap.SCOPE_BASE,
+                                    scope=ldap3.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -310,7 +311,7 @@ class LDAPConn(object):
         attrlist = ['givenName']
 
         result = self.conn.search_s(base=dn,
-                                    scope=ldap.SCOPE_BASE,
+                                    scope=ldap3.SCOPE_BASE,
                                     attrlist=attrlist)
 
         if not result:
@@ -334,10 +335,11 @@ class ZabbixConn(object):
 
     """
 
-    def __init__(self, server, username, password):
+    def __init__(self, server, username, password, auth):
         self.server = server
         self.username = username
         self.password = password
+        self.auth = auth
 
     def verbose(self):
         # Use logger to log information
@@ -368,7 +370,14 @@ class ZabbixConn(object):
 
         """
 
-        self.conn = ZabbixAPI(self.server)
+        if self.auth == "webform":
+            self.conn = ZabbixAPI(self.server)
+        elif self.auth == "http":
+            self.conn = ZabbixAPI(self.server, use_authenticate=False)
+            self.conn.session.auth = (self.username, self.password)
+
+        else:
+            raise SystemExit('api auth method not implemented: %s' % self.conn.auth)
 
         if nocheckcertificate:
             self.conn.session.verify = False
@@ -377,6 +386,8 @@ class ZabbixConn(object):
             self.conn.login(self.username, self.password)
         except ZabbixAPIException as e:
             raise SystemExit('Cannot login to Zabbix server: %s' % e)
+
+        print("Connected to Zabbix API Version %s" % self.conn.api_version())
 
     def get_users(self):
         """
@@ -471,7 +482,7 @@ class ZabbixConn(object):
             The groupid of the newly created group
 
         """
-        result = self.conn.usergroup.create(name=group, permission=3)
+        result = self.conn.usergroup.create(name=group, permission=0)
 
         groupid = result['usrgrpids'].pop()
 
@@ -687,7 +698,7 @@ class ZabbixLDAPConf(object):
 
         try:
             result = parser.get(section, option)
-        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
+        except (configparser.NoOptionError, configparser.NoSectionError):
             result = default
 
         return result
@@ -708,7 +719,7 @@ class ZabbixLDAPConf(object):
 
         try:
             result = parser.items(section)
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
             result = default
 
         return result
@@ -736,7 +747,7 @@ class ZabbixLDAPConf(object):
             ConfigParser.NoOptionError
 
         """
-        parser = ConfigParser.ConfigParser()
+        parser = configparser.ConfigParser()
         parser.read(self.config)
 
         try:
@@ -752,29 +763,32 @@ class ZabbixLDAPConf(object):
 
             self.ldap_media         = self.try_get_item(parser, 'ldap', 'media', 'mail')
 
-            self.ad_filtergroup = parser.get ('ad', 'filtergroup','(&(objectClass=group)(name=%s))')
-            self.ad_filteruser = parser.get ('ad','filteruser', '(objectClass=user)(objectCategory=Person))')
-            self.ad_filterdisabled = parser.get ('ad', 'filterdisabled','(!(userAccountControl:1.2.840.113556.1.4.803:=2))')
-            self.ad_filtermemberof = parser.get ('ad', 'filtermemberof','(memberOf:1.2.840.113556.1.4.1941:=%s)')
-            self.ad_groupattribute = parser.get ('ad', 'groupattribute','member')
-            self.ad_userattribute = parser.get ('ad', 'userattribute','sAMAccountName')
+            self.ad_filtergroup = parser.get('ad', 'filtergroup',fallback='(&(objectClass=group)(name=%s))', raw=True)
+            self.ad_filteruser = parser.get('ad','filteruser', fallback='(objectClass=user)(objectCategory=Person))', raw=True)
+            self.ad_filterdisabled = parser.get('ad', 'filterdisabled',fallback='(!(userAccountControl:1.2.840.113556.1.4.803:=2))', raw=True)
+            self.ad_filtermemberof = parser.get('ad', 'filtermemberof',fallback='(memberOf:1.2.840.113556.1.4.1941:=%s)', raw=True)
+            self.ad_groupattribute = parser.get('ad', 'groupattribute',fallback='member', raw=True)
+            self.ad_userattribute = parser.get('ad', 'userattribute',fallback='sAMAccountName', raw=True)
 
-            self.openldap_type = parser.get ('openldap', 'type','posixgroup')
-            self.openldap_filtergroup = parser.get ('openldap', 'filtergroup','(&(objectClass=posixGroup)(cn=%s))')
-            self.openldap_filteruser = parser.get ('openldap', 'filteruser','(&(objectClass=posixAccount)(uid=%s))')
-            self.openldap_groupattribute = parser.get ('openldap', 'groupattribute','memberUid')
-            self.openldap_userattribute = parser.get ('openldap', 'userattribute','uid')
+            self.openldap_type = parser.get('openldap', 'type',fallback='posixgroup')
+            self.openldap_filtergroup = parser.get('openldap', 'filtergroup',fallback='(&(objectClass=posixGroup)(cn=%s))',raw=True)
+            self.openldap_filteruser = parser.get('openldap', 'filteruser',fallback='(&(objectClass=posixAccount)(uid=%s))',raw=True)
+            self.openldap_groupattribute = parser.get('openldap', 'groupattribute',fallback='memberUid', raw=True)
+            self.openldap_userattribute = parser.get('openldap', 'userattribute',fallback='uid', raw=True)
 
             self.zbx_server         = parser.get('zabbix', 'server')
             self.zbx_username       = parser.get('zabbix', 'username')
             self.zbx_password       = parser.get('zabbix', 'password')
+            self.zbx_auth           = parser.get('zabbix', 'auth')
 
             self.user_opt           = self.try_get_section(parser, 'user', {})
 
             self.media_description   = self.try_get_item(parser, 'media', 'description', 'Email')
             self.media_opt          = self.remove_config_section_items(self.try_get_section(parser, 'media', {}), ('description', 'userid'))
 
-        except ConfigParser.NoOptionError as e:
+        except Exception as e:
+            print(e)
+            traceback.print_exc(file=sys.stderr)
             raise SystemExit('Configuration issues detected in %s' % self.config)
 
     def set_groups_with_wildcard(self):
@@ -864,7 +878,7 @@ Options:
         from requests.packages.urllib3 import disable_warnings
         disable_warnings()
 
-    zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
+    zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password, config.zbx_auth)
     if verbose:
         zabbix_conn.verbose()
     zabbix_conn.connect(nocheckcertificate)

@@ -13,7 +13,7 @@ It can automatically import existing LDAP groups and users into Zabbix, thus mak
 
 ## Requirements
 
-* Python 2.7.x
+* Python 3.x.x
 * [python-ldap](https://pypi.python.org/pypi/python-ldap/)
 * [pyzabbix](https://github.com/lukecyca/pyzabbix)
 * [docopt](https://github.com/docopt/docopt)
@@ -68,6 +68,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `server` - Zabbix URL
 * `username` - Zabbix username. This user must have permissions to add/remove users and groups. Typically, this would be `Zabbix Admin` account.
 * `password` - Password for Zabbix user
+* `auth` - can be `http` (for basic auth) or `webform` (for regular form based login)
 
 #### [user]
 Allows to override various properties for Zabbix users created by script. See [User object](https://www.zabbix.com/documentation/3.2/manual/api/reference/user/object) in Zabbix API documentation for available properties. If section/property doesn't exist, defaults are:
