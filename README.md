@@ -23,9 +23,21 @@ You also need to have your Zabbix Frontend configured to authenticate against an
 Check the official documentation of Zabbix on how to 
 [configure Zabbix to authenticate against an AD/LDAP directory server](https://www.zabbix.com/documentation/2.2/manual/web_interface/frontend_sections/administration/authentication).
 
+### Setup virtualenv
+
+```
+apt-get install python-dev virtualenv
+virtualenv -p python3 env
+source env/bin/activate
+pip install python3-ldap
+pip install pyzabbix
+pip install docopt
+```
+
 ## Configuration
 
 In order to use the *zabbix-ldap-sync* script we need to create a configuration file describing the various LDAP and Zabbix related config entries.
+
 ### Config file sections
 
 #### [ldap]
@@ -124,7 +136,6 @@ You can configure additional properties in this section. See [Media object](http
     active = 0
     period = 1-5,07:00-22:00
     severity = 63
-
 
 ## Command-line arguments
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2013-2014 Marin Atanasov Nikolov <dnaeon@gmail.com>
 # All rights reserved.
@@ -104,7 +104,7 @@ class LDAPConn(object):
                                     attrlist=attrlist)
 
         if not result:
-            print '>>> Unable to find group %s, skipping group' % group
+            print('>>> Unable to find group %s, skipping group' % group)
             return None
 
         # Get DN for each user in the group
@@ -577,7 +577,7 @@ class ZabbixConn(object):
             media_ids = [int(u['mediaid']) for u in user_full[0]['medias'] if u['mediatypeid'] == mediatypeid]
 
             if media_ids:
-                print '>>> Remove other exist media from user %s (type=%s)' % (user, description)
+                print('>>> Remove other exist media from user %s (type=%s)' % (user, description))
                 for id in media_ids:
                     self.conn.user.deletemedia(id)
 
@@ -592,9 +592,9 @@ class ZabbixConn(object):
         missing_groups = set(ldap_groups) - set([g['name'] for g in self.get_groups()])
 
         for eachGroup in missing_groups:
-            print '>>> Creating Zabbix group %s' % eachGroup
+            print('>>> Creating Zabbix group %s' % eachGroup)
             grpid = self.create_group(eachGroup)
-            print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
+            print('>>> Group %s created with groupid %s' % (eachGroup, grpid))
 
     def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass, ldap_media, user_opt, media_description, media_opt):
         """
@@ -624,7 +624,7 @@ class ZabbixConn(object):
 
                 # Create new user if it does not exists already
                 if eachUser not in zabbix_all_users:
-                    print '>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup)
+                    print('>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup))
                     user = {'alias': eachUser}
                     user['name'] = ldap_conn.get_user_givenName(ldap_users[eachUser])
                     user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
@@ -632,25 +632,25 @@ class ZabbixConn(object):
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
-                    print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
+                    print('>>> Updating user %s, adding to group %s' % (eachUser, eachGroup))
                     self.update_user(eachUser, zabbix_grpid)
 
             # Handle any extra users in the groups
             extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
             if extra_users:
-                print '>>> Users in group %s which are not found in LDAP group:' % eachGroup
+                print('>>> Users in group %s which are not found in LDAP group:' % eachGroup)
 
                 for eachUser in extra_users:
                     if deleteorphans:
-                        print 'Deleting user: %s' % eachUser
+                        print('Deleting user: %s' % eachUser)
                         self.delete_user(eachUser)
                     else:
-                        print ' * %s' % eachUser
+                        print(' * %s' % eachUser)
 
             # update users media
             zabbix_group_users = self.get_group_members(zabbix_grpid)
             for eachUser in set(zabbix_group_users):
-                print '>>> Updating user media for %s, update %s' % (eachUser, media_description)
+                print('>>> Updating user media for %s, update %s' % (eachUser, media_description))
                 sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
 
                 if sendto:
