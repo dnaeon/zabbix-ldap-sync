@@ -623,7 +623,7 @@ class ZabbixConn(object):
         zabbix_all_users = self.get_users()
 
         for eachGroup in ldap_groups:
-            print(eachGroup)
+
             ldap_users = ldap_conn.get_group_members(eachGroup)
 
             # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
@@ -885,7 +885,6 @@ Options:
         group_member_attribute = config.openldap_groupattribute
         uid_attribute = config.openldap_userattribute
 
-    print(uid_attribute)
     wildcard_search = args['--wildcard-search']
     if wildcard_search:
         config.set_groups_with_wildcard()
