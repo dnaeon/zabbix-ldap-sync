@@ -14,11 +14,13 @@ It can automatically import existing LDAP groups and users into Zabbix, thus mak
 ## Requirements
 
 * Python 3.x.x
-* [python-ldap](https://pypi.python.org/pypi/python-ldap/)
+* [pyldap](https://pypi.python.org/pypi/pyldap/)
 * [pyzabbix](https://github.com/lukecyca/pyzabbix)
 * [docopt](https://github.com/docopt/docopt)
+* Zabbix 3.4
 
 You also need to have your Zabbix Frontend configured to authenticate against an AD/LDAP directory server.
+(using http or ldap-auth)
 
 Check the official documentation of Zabbix on how to 
 [configure Zabbix to authenticate against an AD/LDAP directory server](https://www.zabbix.com/documentation/2.2/manual/web_interface/frontend_sections/administration/authentication).
@@ -29,7 +31,7 @@ Check the official documentation of Zabbix on how to
 apt-get install python-dev virtualenv libpython3.6-dev libldap2-dev libsasl2-dev
 virtualenv -p python3 env
 source env/bin/activate
-pip install python3-ldap
+pip install pyldap
 pip install pyzabbix
 pip install docopt
 ```
