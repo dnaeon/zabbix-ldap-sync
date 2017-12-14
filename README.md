@@ -95,8 +95,10 @@ You can configure additional properties in this section. See [Media object](http
 ║  Enabled ?  ║      1 ║  1 ║     1 ║     1 ║         1 ║            1 ║
 ╠═════════════╬════════╩════╩═══════╩═══════╩═══════════╩══════════════╣
 ║Decimal value║                     111111 = 63                        ║
+║             ║           Linux: printf '%x\n' "$((2#111000))"         ║
 ╚═════════════╩════════════════════════════════════════════════════════╝
 ```
+
 
 ## Configuration file example
 

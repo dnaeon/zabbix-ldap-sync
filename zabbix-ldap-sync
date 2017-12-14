@@ -164,9 +164,9 @@ class LDAPConn(object):
                 username = item[1][uid_attribute]
 
                 if lowercase:
-                    username = username[0].decode('ascii').lower()
+                    username = username[0].decode('utf8').lower()
                 else:
-                    username = username[0].decode('ascii')
+                    username = username[0].decode('utf8')
 
                 final_listing[username] = dn
 
@@ -677,7 +677,7 @@ class ZabbixConn(object):
             zabbix_group_users = self.get_group_members(zabbix_grpid)
             for eachUser in set(zabbix_group_users):
                 print('>>> Updating user media for "%s", update "%s"' % (eachUser, media_description))
-                sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media).decode("utf-8")
+                sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media).decode("utf8")
 
                 if sendto:
                     self.update_media(eachUser, media_description, sendto, media_opt)
