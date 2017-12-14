@@ -51,7 +51,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `groups` - LDAP groups to sync with Zabbix (support wildcard - TESTED ONLY with Active Directory, see Command-line arguments)
 * `media` - Name of the LDAP attribute of user object, that will be used to set `Send to` property of Zabbix user media. This entry is optional, default value is `mail`.
 
-[ad]
+#### [ad]
 * `filtergroup` = The ldap filter to get group in ActiveDirectory mode, by default `(&(objectClass=group)(name=%s))`
 * `filteruser` = The ldap filter to get the users in ActiveDirectory mode, by default `(objectClass=user)(objectCategory=Person)`
 * `filterdisabled` = The filter to get the disabled user in ActiveDirectory mode, by default `(!(userAccountControl:1.2.840.113556.1.4.803:=2))`
@@ -59,7 +59,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `groupattribute` = The attribute used for membership in a group in ActiveDirectory mode, by default `member`
 * `userattribute` = The attribute for users in ActiveDirectory mode `sAMAccountName`
 
-[openldap]
+#### [openldap]
 * `type` = The storage mode for group and users can be `posix` or `groupofnames` 
 * `filtergroup` = The ldap filter to get group in OpenLDAP mode, by default `(&(objectClass=posixGroup)(cn=%s))`
 * `filteruser` = The ldap filter to get the users in OpenLDAP mode, by default `(&(objectClass=posixAccount)(uid=%s))`
@@ -95,7 +95,7 @@ You can configure additional properties in this section. See [Media object](http
 ║  Enabled ?  ║      1 ║  1 ║     1 ║     1 ║         1 ║            1 ║
 ╠═════════════╬════════╩════╩═══════╩═══════╩═══════════╩══════════════╣
 ║Decimal value║                     111111 = 63                        ║
-║             ║           Linux: printf '%x\n' "$((2#111000))"         ║
+║             ║           Linux: printf '%i\n' "$((2#111111))"         ║
 ╚═════════════╩════════════════════════════════════════════════════════╝
 ```
 
