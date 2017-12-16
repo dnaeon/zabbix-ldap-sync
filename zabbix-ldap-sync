@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2013-2014 Marin Atanasov Nikolov <dnaeon@gmail.com>
+# Copyright (c) 2013-2014 Marc Schöchlin<ms@256bit.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,14 +29,15 @@
 The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 
 """
-
+from pprint import pprint
 import random
 import string
 import logging
-import ConfigParser
+import configparser
 import sys
 import ldap
 import ldap.filter
+import traceback
 from pyzabbix import ZabbixAPI, ZabbixAPIException
 from docopt import docopt
 
@@ -104,7 +106,7 @@ class LDAPConn(object):
                                     attrlist=attrlist)
 
         if not result:
-            print '>>> Unable to find group %s, skipping group' % group
+            print('>>> Unable to find group "%s" with filter "%s", skipping group' % (group,filter))
             return None
 
         # Get DN for each user in the group
@@ -137,6 +139,8 @@ class LDAPConn(object):
                                          filterstr=filter,
                                          attrlist=attrlist)
 
+
+
                 for item in self.remove_ad_referrals(uid):
                     group_members.append(item)
             else:
@@ -147,7 +151,7 @@ class LDAPConn(object):
                     else:
                         filter = "(&%s)" % user_filter
 
-                    uid = self.conn.search_s(base=member,
+                    uid = self.conn.search_s(base=member.decode('utf8'),
                                              scope=ldap.SCOPE_BASE,
                                              filterstr=filter,
                                              attrlist=attrlist)
@@ -160,9 +164,9 @@ class LDAPConn(object):
                 username = item[1][uid_attribute]
 
                 if lowercase:
-                    username = str(username)[2: -2].lower()
+                    username = username[0].decode('utf8').lower()
                 else:
-                    username = str(username)[2: -2]
+                    username = username[0].decode('utf8')
 
                 final_listing[username] = dn
 
@@ -210,6 +214,7 @@ class LDAPConn(object):
 
                 final_listing[user] = dn
 
+
             return final_listing
 
     def get_groups_with_wildcard(self, groups_wildcard):
@@ -231,7 +236,7 @@ class LDAPConn(object):
                 result_groups.append(group_name)
 
         if not result_groups:
-            print('>>> Unable to find group %s, skipping group wildcard' % groups_wildcard)
+            print('>>> Unable to find group "%s", skipping group wildcard' % groups_wildcard)
 
         return result_groups
 
@@ -334,10 +339,11 @@ class ZabbixConn(object):
 
     """
 
-    def __init__(self, server, username, password):
+    def __init__(self, server, username, password, auth):
         self.server = server
         self.username = username
         self.password = password
+        self.auth = auth
 
     def verbose(self):
         # Use logger to log information
@@ -368,7 +374,14 @@ class ZabbixConn(object):
 
         """
 
-        self.conn = ZabbixAPI(self.server)
+        if self.auth == "webform":
+            self.conn = ZabbixAPI(self.server)
+        elif self.auth == "http":
+            self.conn = ZabbixAPI(self.server, use_authenticate=False)
+            self.conn.session.auth = (self.username, self.password)
+
+        else:
+            raise SystemExit('api auth method not implemented: %s' % self.conn.auth)
 
         if nocheckcertificate:
             self.conn.session.verify = False
@@ -377,6 +390,8 @@ class ZabbixConn(object):
             self.conn.login(self.username, self.password)
         except ZabbixAPIException as e:
             raise SystemExit('Cannot login to Zabbix server: %s' % e)
+
+        print("Connected to Zabbix API Version %s" % self.conn.api_version())
 
     def get_users(self):
         """
@@ -471,7 +486,7 @@ class ZabbixConn(object):
             The groupid of the newly created group
 
         """
-        result = self.conn.usergroup.create(name=group, permission=3)
+        result = self.conn.usergroup.create(name=group)
 
         groupid = result['usrgrpids'].pop()
 
@@ -538,6 +553,7 @@ class ZabbixConn(object):
 
         """
 
+
         userid = self.get_user_id(user)
         mediatypeid = self.get_mediatype_id(description)
 
@@ -577,7 +593,7 @@ class ZabbixConn(object):
             media_ids = [int(u['mediaid']) for u in user_full[0]['medias'] if u['mediatypeid'] == mediatypeid]
 
             if media_ids:
-                print '>>> Remove other exist media from user %s (type=%s)' % (user, description)
+                print('>>> Remove other exist media from user %s (type=%s)' % (user, description))
                 for id in media_ids:
                     self.conn.user.deletemedia(id)
 
@@ -592,9 +608,9 @@ class ZabbixConn(object):
         missing_groups = set(ldap_groups) - set([g['name'] for g in self.get_groups()])
 
         for eachGroup in missing_groups:
-            print '>>> Creating Zabbix group %s' % eachGroup
+            print('>>> Creating Zabbix group %s' % eachGroup)
             grpid = self.create_group(eachGroup)
-            print '>>> Group %s created with groupid %s' % (eachGroup, grpid)
+            print('>>> Group %s created with groupid %s' % (eachGroup, grpid))
 
     def sync_users(self, ldap_uri, ldap_base, ldap_groups, ldap_user, ldap_pass, ldap_media, user_opt, media_description, media_opt):
         """
@@ -607,6 +623,7 @@ class ZabbixConn(object):
         zabbix_all_users = self.get_users()
 
         for eachGroup in ldap_groups:
+
             ldap_users = ldap_conn.get_group_members(eachGroup)
 
             # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
@@ -617,41 +634,50 @@ class ZabbixConn(object):
 
             zabbix_group_users = self.get_group_members(zabbix_grpid)
 
+
+
             missing_users = set(list(ldap_users.keys())) - set(zabbix_group_users)
+
 
             # Add missing users
             for eachUser in missing_users:
 
                 # Create new user if it does not exists already
                 if eachUser not in zabbix_all_users:
-                    print '>>> Creating user %s, member of Zabbix group %s' % (eachUser, eachGroup)
+                    print('>>> Creating user "%s", member of Zabbix group "%s"' % (eachUser, eachGroup))
                     user = {'alias': eachUser}
-                    user['name'] = ldap_conn.get_user_givenName(ldap_users[eachUser])
-                    user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser])
+                    user['name'] = ldap_conn.get_user_givenName(ldap_users[eachUser]).decode('utf8')
+                    user['surname'] = ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
+
+                    if user['name'] is None:
+                      user['name'] = ''
+                    if user['surname'] is None:
+                      user['surname'] = ''
+
                     self.create_user(user, zabbix_grpid, user_opt)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
-                    print '>>> Updating user %s, adding to group %s' % (eachUser, eachGroup)
+                    print('>>> Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
                     self.update_user(eachUser, zabbix_grpid)
 
             # Handle any extra users in the groups
             extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
             if extra_users:
-                print '>>> Users in group %s which are not found in LDAP group:' % eachGroup
+                print('>>> Users in group %s which are not found in LDAP group:' % eachGroup)
 
                 for eachUser in extra_users:
                     if deleteorphans:
-                        print 'Deleting user: %s' % eachUser
+                        print('Deleting user: "%s"' % eachUser)
                         self.delete_user(eachUser)
                     else:
-                        print ' * %s' % eachUser
+                        print(' * %s' % eachUser)
 
             # update users media
             zabbix_group_users = self.get_group_members(zabbix_grpid)
             for eachUser in set(zabbix_group_users):
-                print '>>> Updating user media for %s, update %s' % (eachUser, media_description)
-                sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media)
+                print('>>> Updating user media for "%s", update "%s"' % (eachUser, media_description))
+                sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media).decode("utf8")
 
                 if sendto:
                     self.update_media(eachUser, media_description, sendto, media_opt)
@@ -687,7 +713,7 @@ class ZabbixLDAPConf(object):
 
         try:
             result = parser.get(section, option)
-        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
+        except (configparser.NoOptionError, configparser.NoSectionError):
             result = default
 
         return result
@@ -708,7 +734,7 @@ class ZabbixLDAPConf(object):
 
         try:
             result = parser.items(section)
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
             result = default
 
         return result
@@ -736,7 +762,7 @@ class ZabbixLDAPConf(object):
             ConfigParser.NoOptionError
 
         """
-        parser = ConfigParser.ConfigParser()
+        parser = configparser.ConfigParser()
         parser.read(self.config)
 
         try:
@@ -752,29 +778,32 @@ class ZabbixLDAPConf(object):
 
             self.ldap_media         = self.try_get_item(parser, 'ldap', 'media', 'mail')
 
-            self.ad_filtergroup = parser.get ('ad', 'filtergroup','(&(objectClass=group)(name=%s))')
-            self.ad_filteruser = parser.get ('ad','filteruser', '(objectClass=user)(objectCategory=Person))')
-            self.ad_filterdisabled = parser.get ('ad', 'filterdisabled','(!(userAccountControl:1.2.840.113556.1.4.803:=2))')
-            self.ad_filtermemberof = parser.get ('ad', 'filtermemberof','(memberOf:1.2.840.113556.1.4.1941:=%s)')
-            self.ad_groupattribute = parser.get ('ad', 'groupattribute','member')
-            self.ad_userattribute = parser.get ('ad', 'userattribute','sAMAccountName')
+            self.ad_filtergroup = parser.get('ad', 'filtergroup',fallback='(&(objectClass=group)(name=%s))', raw=True)
+            self.ad_filteruser = parser.get('ad','filteruser', fallback='(objectClass=user)(objectCategory=Person))', raw=True)
+            self.ad_filterdisabled = parser.get('ad', 'filterdisabled',fallback='(!(userAccountControl:1.2.840.113556.1.4.803:=2))', raw=True)
+            self.ad_filtermemberof = parser.get('ad', 'filtermemberof',fallback='(memberOf:1.2.840.113556.1.4.1941:=%s)', raw=True)
+            self.ad_groupattribute = parser.get('ad', 'groupattribute',fallback='member', raw=True)
+            self.ad_userattribute = parser.get('ad', 'userattribute',fallback='sAMAccountName', raw=True)
 
-            self.openldap_type = parser.get ('openldap', 'type','posixgroup')
-            self.openldap_filtergroup = parser.get ('openldap', 'filtergroup','(&(objectClass=posixGroup)(cn=%s))')
-            self.openldap_filteruser = parser.get ('openldap', 'filteruser','(&(objectClass=posixAccount)(uid=%s))')
-            self.openldap_groupattribute = parser.get ('openldap', 'groupattribute','memberUid')
-            self.openldap_userattribute = parser.get ('openldap', 'userattribute','uid')
+            self.openldap_type = parser.get('openldap', 'type',fallback='posixgroup')
+            self.openldap_filtergroup = parser.get('openldap', 'filtergroup',fallback='(&(objectClass=posixGroup)(cn=%s))',raw=True)
+            self.openldap_filteruser = parser.get('openldap', 'filteruser',fallback='(&(objectClass=posixAccount)(uid=%s))',raw=True)
+            self.openldap_groupattribute = parser.get('openldap', 'groupattribute',fallback='memberUid', raw=True)
+            self.openldap_userattribute = parser.get('openldap', 'userattribute',fallback='uid', raw=True)
 
             self.zbx_server         = parser.get('zabbix', 'server')
             self.zbx_username       = parser.get('zabbix', 'username')
             self.zbx_password       = parser.get('zabbix', 'password')
+            self.zbx_auth           = parser.get('zabbix', 'auth')
 
             self.user_opt           = self.try_get_section(parser, 'user', {})
 
             self.media_description   = self.try_get_item(parser, 'media', 'description', 'Email')
             self.media_opt          = self.remove_config_section_items(self.try_get_section(parser, 'media', {}), ('description', 'userid'))
 
-        except ConfigParser.NoOptionError as e:
+        except Exception as e:
+            print(e)
+            traceback.print_exc(file=sys.stderr)
             raise SystemExit('Configuration issues detected in %s' % self.config)
 
     def set_groups_with_wildcard(self):
@@ -864,7 +893,7 @@ Options:
         from requests.packages.urllib3 import disable_warnings
         disable_warnings()
 
-    zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password)
+    zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password, config.zbx_auth)
     if verbose:
         zabbix_conn.verbose()
     zabbix_conn.connect(nocheckcertificate)

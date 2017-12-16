@@ -13,19 +13,33 @@ It can automatically import existing LDAP groups and users into Zabbix, thus mak
 
 ## Requirements
 
-* Python 2.7.x
-* [python-ldap](https://pypi.python.org/pypi/python-ldap/)
+* Python 3.x.x
+* [pyldap](https://pypi.python.org/pypi/pyldap/)
 * [pyzabbix](https://github.com/lukecyca/pyzabbix)
 * [docopt](https://github.com/docopt/docopt)
+* Zabbix 3.4
 
 You also need to have your Zabbix Frontend configured to authenticate against an AD/LDAP directory server.
+(using http or ldap-auth)
 
 Check the official documentation of Zabbix on how to 
 [configure Zabbix to authenticate against an AD/LDAP directory server](https://www.zabbix.com/documentation/2.2/manual/web_interface/frontend_sections/administration/authentication).
 
+### Setup virtualenv
+
+```
+apt-get install python-dev virtualenv libpython3.6-dev libldap2-dev libsasl2-dev
+virtualenv -p python3 env
+source env/bin/activate
+pip install pyldap
+pip install pyzabbix
+pip install docopt
+```
+
 ## Configuration
 
 In order to use the *zabbix-ldap-sync* script we need to create a configuration file describing the various LDAP and Zabbix related config entries.
+
 ### Config file sections
 
 #### [ldap]
@@ -37,7 +51,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `groups` - LDAP groups to sync with Zabbix (support wildcard - TESTED ONLY with Active Directory, see Command-line arguments)
 * `media` - Name of the LDAP attribute of user object, that will be used to set `Send to` property of Zabbix user media. This entry is optional, default value is `mail`.
 
-[ad]
+#### [ad]
 * `filtergroup` = The ldap filter to get group in ActiveDirectory mode, by default `(&(objectClass=group)(name=%s))`
 * `filteruser` = The ldap filter to get the users in ActiveDirectory mode, by default `(objectClass=user)(objectCategory=Person)`
 * `filterdisabled` = The filter to get the disabled user in ActiveDirectory mode, by default `(!(userAccountControl:1.2.840.113556.1.4.803:=2))`
@@ -45,7 +59,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `groupattribute` = The attribute used for membership in a group in ActiveDirectory mode, by default `member`
 * `userattribute` = The attribute for users in ActiveDirectory mode `sAMAccountName`
 
-[openldap]
+#### [openldap]
 * `type` = The storage mode for group and users can be `posix` or `groupofnames` 
 * `filtergroup` = The ldap filter to get group in OpenLDAP mode, by default `(&(objectClass=posixGroup)(cn=%s))`
 * `filteruser` = The ldap filter to get the users in OpenLDAP mode, by default `(&(objectClass=posixAccount)(uid=%s))`
@@ -56,6 +70,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `server` - Zabbix URL
 * `username` - Zabbix username. This user must have permissions to add/remove users and groups. Typically, this would be `Zabbix Admin` account.
 * `password` - Password for Zabbix user
+* `auth` - can be `http` (for basic auth) or `webform` (for regular form based login)
 
 #### [user]
 Allows to override various properties for Zabbix users created by script. See [User object](https://www.zabbix.com/documentation/3.2/manual/api/reference/user/object) in Zabbix API documentation for available properties. If section/property doesn't exist, defaults are:
@@ -80,8 +95,10 @@ You can configure additional properties in this section. See [Media object](http
 ║  Enabled ?  ║      1 ║  1 ║     1 ║     1 ║         1 ║            1 ║
 ╠═════════════╬════════╩════╩═══════╩═══════╩═══════════╩══════════════╣
 ║Decimal value║                     111111 = 63                        ║
+║             ║           Linux: printf '%i\n' "$((2#111111))"         ║
 ╚═════════════╩════════════════════════════════════════════════════════╝
 ```
+
 
 ## Configuration file example
 
@@ -124,7 +141,6 @@ You can configure additional properties in this section. See [Media object](http
     active = 0
     period = 1-5,07:00-22:00
     severity = 63
-
 
 ## Command-line arguments
 
