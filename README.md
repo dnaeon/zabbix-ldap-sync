@@ -1,15 +1,10 @@
-## LOOKING FOR MAINTAINERS
-
-I no longer have enough time to actively work on this project, therefore I'm looking for
-maintainers that can step up and take ownership of this project.
-
-If you'd like to become maintainer of this project, please contact me.
-
 ## zabbix-ldap-sync -- Sync your Zabbix users with LDAP directory server
 
 The *zabbix-ldap-sync* script is used for keeping your Zabbix users in sync with an LDAP directory server.
 
 It can automatically import existing LDAP groups and users into Zabbix, thus making it easy for you to keep your Zabbix users in sync with LDAP.
+
+Maintained by Marc Schöchlin <ms@256bit.org>
 
 ## Requirements
 
