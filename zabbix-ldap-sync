@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright (c) 2013-2014 Marin Atanasov Nikolov <dnaeon@gmail.com>
-# Copyright (c) 2013-2014 Marc Schöchlin<ms@256bit.org>
+# Copyright (c) 2013-2014 Marc Schöchlin <ms@256bit.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -565,6 +565,7 @@ class ZabbixConn(object):
                 'severity': '63',
                 'period': '1-7,00:00-24:00'
             }
+
             media_defaults.update(media_opt)
 
             self.delete_media_by_description(user, description)
@@ -635,7 +636,6 @@ class ZabbixConn(object):
             zabbix_group_users = self.get_group_members(zabbix_grpid)
 
 
-
             missing_users = set(list(ldap_users.keys())) - set(zabbix_group_users)
 
 
@@ -656,6 +656,7 @@ class ZabbixConn(object):
 
                     self.create_user(user, zabbix_grpid, user_opt)
                     zabbix_all_users.append(eachUser)
+                    created_users.append(user)
                 else:
                     # Update existing user to be member of the group
                     print('>>> Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
@@ -674,13 +675,27 @@ class ZabbixConn(object):
                         print(' * %s' % eachUser)
 
             # update users media
-            zabbix_group_users = self.get_group_members(zabbix_grpid)
+            onlycreate = False
+            media_opt_filtered = []
+            for elem in media_opt:
+                if elem[0] == "onlycreate" and elem[1].lower() == "true":
+                    onlycreate = True
+                else:
+                    media_opt_filtered.append(elem)
+
+            if onlycreate:
+                print("Add media only on newly created users for group >>>%s<<<" % eachGroup)
+                zabbix_group_users = missing_users
+            else:
+                print("Update media on all users for group >>>%s<<<" % eachGroup)
+                zabbix_group_users = self.get_group_members(zabbix_grpid)
+
             for eachUser in set(zabbix_group_users):
-                print('>>> Updating user media for "%s", update "%s"' % (eachUser, media_description))
+                print('>>> Updating/create user media for "%s", update "%s"' % (eachUser, media_description))
                 sendto = ldap_conn.get_user_media(ldap_users[eachUser], ldap_media).decode("utf8")
 
                 if sendto:
-                    self.update_media(eachUser, media_description, sendto, media_opt)
+                    self.update_media(eachUser, media_description, sendto, media_opt_filtered)
 
         ldap_conn.disconnect()
 
