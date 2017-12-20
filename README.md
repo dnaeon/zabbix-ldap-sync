@@ -23,12 +23,10 @@ Check the official documentation of Zabbix on how to
 ### Setup virtualenv
 
 ```
-apt-get install python-dev virtualenv libpython3.6-dev libldap2-dev libsasl2-dev
-virtualenv -p python3 env
-source env/bin/activate
-pip install pyldap
-pip install pyzabbix
-pip install docopt
+apt-get install python-dev virtualenv libpython3.*-dev libldap2-dev libsasl2-dev
+virtualenv -p python3 venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Configuration
