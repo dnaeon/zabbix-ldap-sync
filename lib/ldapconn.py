@@ -17,7 +17,6 @@ class LDAPConn(object):
         self.ldap_pass = config.ldap_passwd
         self.group_member_attribute = config.ldap_group_member_attribute
         self.group_filter = config.ldap_group_filter
-        #self.active_directory = config.ldap_active_directory
         self.uid_attribute = config.ldap_uid_attribute
         self.recursive = config.ldap_recursive
         self.memberof_filter = config.ldap_memberof_filter

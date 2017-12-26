@@ -24,7 +24,9 @@ class ZabbixConn(object):
         self.dryrun = config.zbx_dryrun
         self.nocheckcertificate = config.zbx_nocheckcertificate
         self.ldap_groups = config.ldap_groups
+        self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
+        self.media_description = config.media_description
 
     def verbose(self):
         # Use logger to log information
@@ -46,9 +48,6 @@ class ZabbixConn(object):
     def connect(self):
         """
         Establishes a connection to the Zabbix server
-
-        Args:
-            nocheckcertificate (bool): Don't check the server certificate
 
         Raises:
             SystemExit
@@ -280,9 +279,6 @@ class ZabbixConn(object):
         """
         Creates any missing LDAP groups in Zabbix
 
-        Args:
-            ldap_groups (list): A list of LDAP groups to create
-
         """
         missing_groups = set(self.ldap_groups) - set([g['name'] for g in self.get_groups()])
 
@@ -398,10 +394,10 @@ class ZabbixConn(object):
                 zabbix_group_users = self.get_group_members(zabbix_grpid)
 
             for eachUser in set(zabbix_group_users):
-                print('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.config.media_description))
-                sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.config.ldap_media).decode("utf8")
+                print('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
+                sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
 
                 if sendto and not self.dryrun:
-                    self.update_media(eachUser, self.config.media_description, sendto, media_opt_filtered)
+                    self.update_media(eachUser, self.media_description, sendto, media_opt_filtered)
 
         self.ldap_conn.disconnect()
