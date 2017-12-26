@@ -6,6 +6,8 @@ It can automatically import existing LDAP groups and users into Zabbix, thus mak
 
 Maintained by Marc Schöchlin <ms@256bit.org>
 
+**Note:** This script is currently under heavy refactoring, please derive improvement-branches from branch "refactoring"
+
 ## Requirements
 
 * Python 3.x.x
