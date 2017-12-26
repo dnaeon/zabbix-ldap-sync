@@ -64,59 +64,39 @@ Options:
     args = docopt(usage, version="0.1.1")
 
     config = ZabbixLDAPConf(args['--file'])
-    config.load_config()
 
-    lowercase = args['--lowercase']
-    skipdisabled = args['--skip-disabled']
-    deleteorphans = args['--delete-orphans']
-    nocheckcertificate = args['--no-check-certificate']
-    recursive = args['--recursive']
-    verbose = args['--verbose']
-    dryrun = args['--dryrun']
+    config.zbx_lowercase = args['--lowercase']
+    config.zbx_skipdisabled = args['--skip-disabled']
+    config.zbx_deleteorphans = args['--delete-orphans']
+    config.zbx_nocheckcertificate = args['--no-check-certificate']
 
-    if config.ldap_type == 'activedirectory':
-        active_directory = "true"
-        group_filter = config.ad_filtergroup
-        user_filter = config.ad_filteruser
-        disabled_filter = config.ad_filterdisabled
-        memberof_filter = config.ad_filtermemberof
-        group_member_attribute = config.ad_groupattribute
-        uid_attribute = config.ad_userattribute
-    else:
-        active_directory = None
-        openldap_type = config.openldap_type
-        group_filter = config.openldap_filtergroup
-        user_filter = config.openldap_filteruser
-        group_member_attribute = config.openldap_groupattribute
-        uid_attribute = config.openldap_userattribute
+    config.ldap_recursive = args['--recursive']
+    config.ldap_wildcard_search = args['--wildcard-search']
 
-    wildcard_search = args['--wildcard-search']
-    if wildcard_search:
+    config.verbose = args['--verbose']
+    config.dryrun = args['--dryrun']
+
+
+    if config.ldap_wildcard_search:
         config.set_groups_with_wildcard()
 
-    if nocheckcertificate:
+    if config.zbx_nocheckcertificate:
         from requests.packages.urllib3 import disable_warnings
         disable_warnings()
 
-    ldap_conn = LDAPConn(config.ldap_uri, config.ldap_base, config.ldap_user, config.ldap_pass,
-                         group_member_attribute, group_filter, active_directory, uid_attribute, recursive,
-                         memberof_filter, skipdisabled, lowercase, user_filter)
 
-    zabbix_conn = ZabbixConn(config.zbx_server, config.zbx_username, config.zbx_password, config.zbx_auth,
-                             ldap_conn, config, dryrun)
+    ldap_conn = LDAPConn(config)
 
-    if verbose:
+    zabbix_conn = ZabbixConn(config, ldap_conn)
+
+    if config.verbose:
         zabbix_conn.verbose()
-    zabbix_conn.connect(nocheckcertificate)
 
-    zabbix_conn.create_missing_groups(config.ldap_groups)
+    zabbix_conn.connect()
 
-    #def sync_users(self, ldap_groups, ldap_media, user_opt, media_description, media_opt):
+    zabbix_conn.create_missing_groups()
 
-    zabbix_conn.sync_users(
-                           config.user_opt,
-                           config.media_description,
-                           config.media_opt)
+    zabbix_conn.sync_users()
 
 if __name__ == '__main__':
     main()

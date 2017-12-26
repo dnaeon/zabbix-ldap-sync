@@ -10,21 +10,21 @@ class LDAPConn(object):
 
     """
 
-    def __init__(self, uri, base, user, passwd, group_member_attribute, group_filter,
-        active_directory, uid_attribute, recursive, memberof_filter, skipdisabled, lowercase, userfilter):
-        self.uri = uri
-        self.base = base
-        self.ldap_user = user
-        self.ldap_pass = passwd
-        self.group_member_attribute = group_member_attribute
-        self.group_filter = group_filter
-        self.active_directory = active_directory
-        self.uid_attribute = uid_attribute
-        self.recursive = recursive
-        self.memberof_filter = memberof_filter
-        self.skipdisabled = skipdisabled
-        self.lowercase = lowercase
-        self.user_filter = userfilter
+    def __init__(self, config):
+        self.uri = config.ldap_uri
+        self.base = config.ldap_base
+        self.ldap_user = config.ldap_user
+        self.ldap_pass = config.ldap_passwd
+        self.group_member_attribute = config.ldap_group_member_attribute
+        self.group_filter = config.ldap_group_filter
+        #self.active_directory = config.ldap_active_directory
+        self.uid_attribute = config.ldap_uid_attribute
+        self.recursive = config.ldap_recursive
+        self.memberof_filter = config.ldap_memberof_filter
+        self.skipdisabled = config.ldap_skipdisabled
+        self.lowercase = config.ldap_lowercase
+        self.user_filter = config.ldap_user_filter
+        self.active_directory = config.ldap_active_directory
 
     def connect(self):
         """

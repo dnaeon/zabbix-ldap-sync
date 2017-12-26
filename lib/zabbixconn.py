@@ -15,14 +15,16 @@ class ZabbixConn(object):
 
     """
 
-    def __init__(self, server, username, password, auth, ldap_conn, config, dryrun):
-        self.server = server
-        self.username = username
-        self.password = password
-        self.auth = auth
+    def __init__(self, config, ldap_conn):
         self.ldap_conn = ldap_conn
-        self.config = config
-        self.dryrun = dryrun
+        self.server = config.zbx_server
+        self.username = config.zbx_username
+        self.password = config.zbx_password
+        self.auth = config.zbx_auth
+        self.dryrun = config.zbx_dryrun
+        self.nocheckcertificate = config.zbx_nocheckcertificate
+        self.ldap_groups = config.ldap_groups
+        self.media_opt = config.media_opt
 
     def verbose(self):
         # Use logger to log information
@@ -41,7 +43,7 @@ class ZabbixConn(object):
         log.addHandler(ch)
         log.setLevel(logging.DEBUG)
 
-    def connect(self, nocheckcertificate):
+    def connect(self):
         """
         Establishes a connection to the Zabbix server
 
@@ -62,7 +64,7 @@ class ZabbixConn(object):
         else:
             raise SystemExit('api auth method not implemented: %s' % self.conn.auth)
 
-        if nocheckcertificate:
+        if self.nocheckcertificate:
             self.conn.session.verify = False
 
         try:
@@ -274,7 +276,7 @@ class ZabbixConn(object):
                 for id in media_ids:
                     self.conn.user.deletemedia(id)
 
-    def create_missing_groups(self, ldap_groups):
+    def create_missing_groups(self):
         """
         Creates any missing LDAP groups in Zabbix
 
@@ -282,7 +284,7 @@ class ZabbixConn(object):
             ldap_groups (list): A list of LDAP groups to create
 
         """
-        missing_groups = set(ldap_groups) - set([g['name'] for g in self.get_groups()])
+        missing_groups = set(self.ldap_groups) - set([g['name'] for g in self.get_groups()])
 
         for eachGroup in missing_groups:
             print('>>> Creating Zabbix group %s' % eachGroup)
@@ -318,7 +320,7 @@ class ZabbixConn(object):
 
         return severity
 
-    def sync_users(self, user_opt, media_description, media_opt):
+    def sync_users(self):
         """
         Syncs Zabbix with LDAP users
         """
@@ -326,7 +328,7 @@ class ZabbixConn(object):
         self.ldap_conn.connect()
         zabbix_all_users = self.get_users()
 
-        for eachGroup in self.config.ldap_groups:
+        for eachGroup in self.ldap_groups:
 
             ldap_users = self.ldap_conn.get_group_members(eachGroup)
 
@@ -355,7 +357,7 @@ class ZabbixConn(object):
                     if user['surname'] is None:
                         user['surname'] = ''
 
-                    self.create_user(user, zabbix_grpid, user_opt)
+                    self.create_user(user, zabbix_grpid, self.config.user_opt)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
@@ -378,7 +380,7 @@ class ZabbixConn(object):
             # update users media
             onlycreate = False
             media_opt_filtered = []
-            for elem in media_opt:
+            for elem in self.media_opt:
                 if elem[0] == "onlycreate" and elem[1].lower() == "true":
                     onlycreate = True
                 if elem[0] == "severity":
@@ -396,10 +398,10 @@ class ZabbixConn(object):
                 zabbix_group_users = self.get_group_members(zabbix_grpid)
 
             for eachUser in set(zabbix_group_users):
-                print('>>> Updating/create user media for "%s", update "%s"' % (eachUser, media_description))
+                print('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.config.media_description))
                 sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.config.ldap_media).decode("utf8")
 
                 if sendto and not self.dryrun:
-                    self.update_media(eachUser, media_description, sendto, media_opt_filtered)
+                    self.update_media(eachUser, self.config.media_description, sendto, media_opt_filtered)
 
         self.ldap_conn.disconnect()
