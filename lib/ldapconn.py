@@ -32,6 +32,9 @@ class LDAPConn(object):
         self.logger = logging.getLogger()
         if self.verbose:
             self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
+
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
         # Log to stdout
@@ -99,7 +102,7 @@ class LDAPConn(object):
                                     attrlist=attrlist)
 
         if not result:
-            print('>>> Unable to find group "%s" with filter "%s", skipping group' % (group, filter))
+            self.logger.info('Unable to find group "%s" with filter "%s", skipping group' % (group, filter))
             return None
 
 
@@ -209,7 +212,7 @@ class LDAPConn(object):
             return final_listing
 
     def get_groups_with_wildcard(self, groups_wildcard):
-        print(">>> Search group with wildcard: %s" % groups_wildcard)
+        self.logger.info("Search group with wildcard: %s" % groups_wildcard)
 
         filter = self.group_filter % groups_wildcard
         result_groups = []
@@ -223,11 +226,11 @@ class LDAPConn(object):
             # [0]==None
             if group[0]:
                 group_name = group[1]['name'][0]
-                print("Find group %s" % group_name)
+                self.logger.info("Find group %s" % group_name)
                 result_groups.append(group_name)
 
         if not result_groups:
-            print('>>> Unable to find group "%s", skipping group wildcard' % groups_wildcard)
+            self.logger.info('Unable to find group "%s", skipping group wildcard' % groups_wildcard)
 
         return result_groups
 

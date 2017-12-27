@@ -37,14 +37,16 @@ class ZabbixConn(object):
         # Use logger to log information
         self.logger = logging.getLogger()
         if config.verbose:
-            print("****************VERBOSE")
             self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
         # Log to stdout
         ch = logging.StreamHandler()
         if config.verbose:
             ch.setLevel(logging.DEBUG)
+
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)  # Use logger to log information
 
@@ -80,7 +82,7 @@ class ZabbixConn(object):
         except ZabbixAPIException as e:
             raise SystemExit('Cannot login to Zabbix server: %s' % e)
 
-        print("Connected to Zabbix API Version %s" % self.conn.api_version())
+        self.logger.info("Connected to Zabbix API Version %s" % self.conn.api_version())
 
     def get_users(self):
         """
@@ -280,7 +282,7 @@ class ZabbixConn(object):
             media_ids = [int(u['mediaid']) for u in user_full[0]['medias'] if u['mediatypeid'] == mediatypeid]
 
             if media_ids:
-                print('>>> Remove other exist media from user %s (type=%s)' % (user, description))
+                self.logger.info('Remove other exist media from user %s (type=%s)' % (user, description))
                 for id in media_ids:
                     self.conn.user.deletemedia(id)
 
@@ -292,10 +294,10 @@ class ZabbixConn(object):
         missing_groups = set(self.ldap_groups) - set([g['name'] for g in self.get_groups()])
 
         for eachGroup in missing_groups:
-            print('>>> Creating Zabbix group %s' % eachGroup)
+            self.logger.info('Creating Zabbix group %s' % eachGroup)
             if not self.dryrun:
                 grpid = self.create_group(eachGroup)
-                print('>>> Group %s created with groupid %s' % (eachGroup, grpid))
+                self.logger.info('Group %s created with groupid %s' % (eachGroup, grpid))
 
     def convert_severity(self, severity):
 
@@ -352,7 +354,7 @@ class ZabbixConn(object):
 
                 # Create new user if it does not exists already
                 if eachUser not in zabbix_all_users:
-                    print('>>> Creating user "%s", member of Zabbix group "%s"' % (eachUser, eachGroup))
+                    self.logger.info('Creating user "%s", member of Zabbix group "%s"' % (eachUser, eachGroup))
                     user = {'alias': eachUser}
                     user['name'] = self.ldap_conn.get_user_givenName(ldap_users[eachUser]).decode('utf8')
                     user['surname'] = self.ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
@@ -366,21 +368,21 @@ class ZabbixConn(object):
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
-                    print('>>> Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
+                    self.logger.info('Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
                     self.update_user(eachUser, zabbix_grpid)
 
             # Handle any extra users in the groups
             extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
             if extra_users:
-                print('>>> Users in group %s which are not found in LDAP group:' % eachGroup)
+                self.logger.info('Users in group %s which are not found in LDAP group:' % eachGroup)
 
                 for eachUser in extra_users:
                     if self.deleteorphans:
-                        print('Deleting user: "%s"' % eachUser)
+                        self.logger.info('Deleting user: "%s"' % eachUser)
                         if not self.dryrun:
                             self.delete_user(eachUser)
                     else:
-                        print(' * %s' % eachUser)
+                        self.logger.info(' * %s' % eachUser)
 
             # update users media
             onlycreate = False
@@ -396,14 +398,14 @@ class ZabbixConn(object):
                     media_opt_filtered.append(elem)
 
             if onlycreate:
-                print("Add media only on newly created users for group >>>%s<<<" % eachGroup)
+                self.logger.info("Add media only on newly created users for group >>>%s<<<" % eachGroup)
                 zabbix_group_users = missing_users
             else:
-                print("Update media on all users for group >>>%s<<<" % eachGroup)
+                self.logger.info("Update media on all users for group >>>%s<<<" % eachGroup)
                 zabbix_group_users = self.get_group_members(zabbix_grpid)
 
             for eachUser in set(zabbix_group_users):
-                print('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
+                self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
                 sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
 
                 if sendto and not self.dryrun:
