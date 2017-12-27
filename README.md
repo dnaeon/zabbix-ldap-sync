@@ -82,7 +82,7 @@ You can configure additional properties in this section. See [Media object](http
 * `active = 0` - Whether the media is enabled. Possible values: `0`- enabled; `1` - disabled.
 * `period = 1-7,00:00-24:00` - Time when the notifications can be sent as a [time period](https://www.zabbix.com/documentation/3.2/manual/appendix/time_period).
 * `onlycreate = true` -  Process media only on newly created users if this is set to `true`. 
-* `severity = 63` - Decimal value of trigger severities to send notifications about. Each severity value occupies a position of a 6-bit value. Use this table to calculate decimal representation or enumerate teh severities separated by a comma:
+* `severity = 63` - Decimal value of trigger severities to send notifications about. Each severity value occupies a position of a 6-bit value. Use this table to calculate decimal representation or enumerate the severities separated by a comma:
 ```
 ╔═════════════╦════════╦════╦═══════╦═══════╦═══════════╦══════════════╗
 ║  Severity   ║Disaster║High║Average║Warning║Information║Not Classified║
@@ -91,6 +91,7 @@ You can configure additional properties in this section. See [Media object](http
 ╠═════════════╬════════╩════╩═══════╩═══════╩═══════════╩══════════════╣
 ║Decimal value║                     111111 = 63                        ║
 ║             ║           Linux: printf '%i\n' "$((2#111111))"         ║
+║             ║Disaster,High,Average,Warning,Information,Not Classified║
 ╚═════════════╩════════════════════════════════════════════════════════╝
 ```
 

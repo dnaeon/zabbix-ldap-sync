@@ -31,16 +31,19 @@ Tested against Zabbix 3.0.
 
 %install
 mkdir -p %{buildroot}%{_sbindir}
+mkdir -p %{buildroot}/share/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}
 
 cp %{name} %{buildroot}%{_sbindir}
 cp zabbix-ldap.conf %{buildroot}%{_sysconfdir}/%{name}/
+cp -r lib/* %{buildroot}/share/%{name}/
 
 %files
 %defattr(-,root,root,-)
 %doc LICENSE README.md
 %config %{_sysconfdir}/%{name}/zabbix-ldap.conf
 %{_sbindir}/%{name}
+%{buildroot}%{_sysconfdir}/%{name}
 
 %changelog
 * Tue Oct 19 2016 Benoit Mortier <benoit.mortier@opensides.be> - 0.1-1
