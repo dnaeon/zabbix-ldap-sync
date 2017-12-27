@@ -2,8 +2,6 @@ import configparser
 import sys
 import traceback
 
-from ldapconn import LDAPConn
-
 
 class ZabbixLDAPConf(object):
     """
@@ -21,7 +19,6 @@ class ZabbixLDAPConf(object):
 
         self.verbose = False
         self.zbx_dryrun = False
-
 
         self.ldap_lowercase = False
         self.ldap_recursive = False
@@ -76,7 +73,7 @@ class ZabbixLDAPConf(object):
                                                               ('description', 'userid'))
 
             if self.ldap_type == 'activedirectory':
-                self.ldap_active_directory = "true"
+                self.ldap_active_directory = True
                 self.ldap_group_filter = self.ad_filtergroup
                 self.ldap_user_filter = self.ad_filteruser
                 self.ldap_disabled_filter = self.ad_filterdisabled
@@ -95,7 +92,6 @@ class ZabbixLDAPConf(object):
             print(e)
             traceback.print_exc(file=sys.stderr)
             raise SystemExit('Configuration issues detected in %s' % self.config)
-
 
     def try_get_item(self, parser, section, option, default):
         """
@@ -154,22 +150,3 @@ class ZabbixLDAPConf(object):
         """
 
         return [i for i in section if i[0] not in items]
-
-
-    def set_groups_with_wildcard(self):
-        """
-        Set group from LDAP with wildcard
-        :return:
-        """
-        result_groups = []
-        ldap_conn = LDAPConn(self.ldap_uri, self.ldap_base, self.ldap_user, self.ldap_pass)
-        ldap_conn.connect()
-
-        for group in self.ldap_groups:
-            groups = ldap_conn.get_groups_with_wildcard(group)
-            result_groups = result_groups + groups
-
-        if result_groups:
-            self.ldap_groups = result_groups
-        else:
-            raise SystemExit('ERROR - No groups found with wildcard')

@@ -27,23 +27,32 @@ class ZabbixConn(object):
         self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
         self.media_description = config.media_description
+        if self.nocheckcertificate:
+            from requests.packages.urllib3 import disable_warnings
+            disable_warnings()
 
-    def verbose(self):
+        if config.ldap_wildcard_search:
+            self.ldap_groups = ldap_conn.get_groups_with_wildcard()
+
         # Use logger to log information
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger()
+        if config.verbose:
+            print("****************VERBOSE")
+            self.logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
         # Log to stdout
         ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        if config.verbose:
+            ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
-        logger.addHandler(ch)  # Use logger to log information
+        self.logger.addHandler(ch)  # Use logger to log information
 
         # Log from pyzabbix
         log = logging.getLogger('pyzabbix')
         log.addHandler(ch)
-        log.setLevel(logging.DEBUG)
+        if config.verbose:
+            log.setLevel(logging.DEBUG)
 
     def connect(self):
         """

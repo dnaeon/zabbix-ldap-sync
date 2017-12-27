@@ -1,5 +1,7 @@
 import ldap
 import ldap.filter
+import logging
+
 
 
 class LDAPConn(object):
@@ -24,6 +26,28 @@ class LDAPConn(object):
         self.lowercase = config.ldap_lowercase
         self.user_filter = config.ldap_user_filter
         self.active_directory = config.ldap_active_directory
+        self.verbose = config.verbose
+
+        # Use logger to log information
+        self.logger = logging.getLogger()
+        if self.verbose:
+            self.logger.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+        # Log to stdout
+        ch = logging.StreamHandler()
+        if self.verbose:
+             ch.setLevel(logging.DEBUG)
+
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)  # Use logger to log information
+
+        # Log from pyldap
+        log = logging.getLogger('ldap')
+        log.addHandler(ch)
+        if self.verbose:
+            log.setLevel(logging.DEBUG)
+            ldap.set_option(ldap.OPT_DEBUG_LEVEL, 4095)
 
     def connect(self):
         """
@@ -294,3 +318,21 @@ class LDAPConn(object):
             return None
 
         return name.pop()
+
+    def get_groups_with_wildcard(self):
+        """
+        Set group from LDAP with wildcard
+        :return:
+        """
+        result_groups = []
+        ldap_conn = LDAPConn(self.ldap_uri, self.ldap_base, self.ldap_user, self.ldap_pass)
+        ldap_conn.connect()
+
+        for group in self.ldap_groups:
+            groups = ldap_conn.get_groups_with_wildcard(group)
+            result_groups = result_groups + groups
+
+        if not result_groups:
+            raise SystemExit('ERROR - No groups found with wildcard')
+
+        return result_groups

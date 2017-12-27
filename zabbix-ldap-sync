@@ -76,21 +76,9 @@ Options:
     config.verbose = args['--verbose']
     config.dryrun = args['--dryrun']
 
-
-    if config.ldap_wildcard_search:
-        config.set_groups_with_wildcard()
-
-    if config.zbx_nocheckcertificate:
-        from requests.packages.urllib3 import disable_warnings
-        disable_warnings()
-
-
     ldap_conn = LDAPConn(config)
 
     zabbix_conn = ZabbixConn(config, ldap_conn)
-
-    if config.verbose:
-        zabbix_conn.verbose()
 
     zabbix_conn.connect()
 
