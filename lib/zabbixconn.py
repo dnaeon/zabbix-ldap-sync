@@ -27,6 +27,7 @@ class ZabbixConn(object):
         self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
         self.media_description = config.media_description
+        self.user_opt = config.user_opt
         if self.nocheckcertificate:
             from requests.packages.urllib3 import disable_warnings
             disable_warnings()
@@ -364,7 +365,7 @@ class ZabbixConn(object):
                     if user['surname'] is None:
                         user['surname'] = ''
 
-                    self.create_user(user, zabbix_grpid, self.config.user_opt)
+                    self.create_user(user, zabbix_grpid, self.user_opt)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
