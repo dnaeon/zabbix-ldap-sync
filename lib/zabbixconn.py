@@ -302,8 +302,10 @@ class ZabbixConn(object):
 
     def convert_severity(self, severity):
 
-        if re.match("\d+", severity):
-            return severity
+        converted_severity = severity.strip()
+
+        if re.match("\d+", converted_severity):
+            return converted_severity
 
         sev_entries = collections.OrderedDict({
             "Disaster": "0",
@@ -314,7 +316,7 @@ class ZabbixConn(object):
             "Not Classified": "0",
         })
 
-        for sev in severity.split(","):
+        for sev in converted_severity.split(","):
             sev = sev.strip()
             if sev not in sev_entries:
                 raise Exception("wrong argument: %s" % sev)
@@ -324,7 +326,8 @@ class ZabbixConn(object):
         for sev, digit in sev_entries.items():
             str_bitmask += digit
 
-        severity = str(int(str_bitmask, 2))
+        converted_severity = str(int(str_bitmask, 2))
+        self.logger.info('Converted severity "%s" to "%s"' % (severity, converted_severity))
 
         return severity
 
