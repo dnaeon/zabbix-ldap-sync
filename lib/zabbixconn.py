@@ -27,6 +27,7 @@ class ZabbixConn(object):
         self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
         self.media_description = config.media_description
+        self.user_opt = config.user_opt
         if self.nocheckcertificate:
             from requests.packages.urllib3 import disable_warnings
             disable_warnings()
@@ -301,8 +302,10 @@ class ZabbixConn(object):
 
     def convert_severity(self, severity):
 
-        if re.match("\d+", severity):
-            return severity
+        converted_severity = severity.strip()
+
+        if re.match("\d+", converted_severity):
+            return converted_severity
 
         sev_entries = collections.OrderedDict({
             "Disaster": "0",
@@ -313,7 +316,7 @@ class ZabbixConn(object):
             "Not Classified": "0",
         })
 
-        for sev in severity.split(","):
+        for sev in converted_severity.split(","):
             sev = sev.strip()
             if sev not in sev_entries:
                 raise Exception("wrong argument: %s" % sev)
@@ -323,7 +326,8 @@ class ZabbixConn(object):
         for sev, digit in sev_entries.items():
             str_bitmask += digit
 
-        severity = str(int(str_bitmask, 2))
+        converted_severity = str(int(str_bitmask, 2))
+        self.logger.info('Converted severity "%s" to "%s"' % (severity, converted_severity))
 
         return severity
 
@@ -364,7 +368,7 @@ class ZabbixConn(object):
                     if user['surname'] is None:
                         user['surname'] = ''
 
-                    self.create_user(user, zabbix_grpid, self.config.user_opt)
+                    self.create_user(user, zabbix_grpid, self.user_opt)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
