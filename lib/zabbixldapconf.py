@@ -81,6 +81,7 @@ class ZabbixLDAPConf(object):
                 self.ldap_group_member_attribute = self.ad_groupattribute
                 self.ldap_uid_attribute = self.ad_userattribute
             else:
+                self.ldap_recursive = False
                 self.ldap_active_directory = None
                 self.ldap_openldap_type = self.openldap_type
                 self.ldap_group_filter = self.openldap_filtergroup

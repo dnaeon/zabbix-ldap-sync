@@ -21,7 +21,8 @@ class LDAPConn(object):
         self.group_filter = config.ldap_group_filter
         self.uid_attribute = config.ldap_uid_attribute
         self.recursive = config.ldap_recursive
-        self.memberof_filter = config.ldap_memberof_filter
+        if self.recursive:
+            self.memberof_filter = config.ldap_memberof_filter
         self.skipdisabled = config.ldap_skipdisabled
         self.lowercase = config.ldap_lowercase
         self.user_filter = config.ldap_user_filter
