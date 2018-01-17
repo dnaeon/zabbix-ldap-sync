@@ -17,6 +17,7 @@ class LDAPConn(object):
         self.base = config.ldap_base
         self.ldap_user = config.ldap_user
         self.ldap_pass = config.ldap_passwd
+        self.ldap_type = config.ldap_type
         self.group_member_attribute = config.ldap_group_member_attribute
         self.group_filter = config.ldap_group_filter
         self.uid_attribute = config.ldap_uid_attribute
@@ -180,11 +181,9 @@ class LDAPConn(object):
             for memberid in users[self.group_member_attribute]:
 
                 if self.openldap_type == "groupofnames":
-
                     filter = "(objectClass=*)"
                     # memberid is user dn
                     base = memberid
-
                 else:
 
                     # memberid is user attribute, most likely uid
