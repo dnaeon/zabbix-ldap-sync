@@ -21,14 +21,15 @@ class LDAPConn(object):
         self.group_member_attribute = config.ldap_group_member_attribute
         self.group_filter = config.ldap_group_filter
         self.uid_attribute = config.ldap_uid_attribute
+        self.active_directory = config.ldap_active_directory
         self.recursive = config.ldap_recursive
-        if self.recursive:
+        if self.recursive and self.active_directory:
             self.memberof_filter = config.ldap_memberof_filter
         self.skipdisabled = config.ldap_skipdisabled
         self.lowercase = config.ldap_lowercase
         self.user_filter = config.ldap_user_filter
-        self.active_directory = config.ldap_active_directory
         self.verbose = config.verbose
+        self.openldap_type = config.openldap_type
 
         # Use logger to log information
         self.logger = logging.getLogger()

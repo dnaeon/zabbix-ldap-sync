@@ -72,6 +72,7 @@ class ZabbixLDAPConf(object):
             self.media_opt = self.remove_config_section_items(self.try_get_section(parser, 'media', {}),
                                                               ('description', 'userid'))
 
+
             if self.ldap_type == 'activedirectory':
                 self.ldap_active_directory = True
                 self.ldap_group_filter = self.ad_filtergroup
@@ -82,7 +83,7 @@ class ZabbixLDAPConf(object):
                 self.ldap_uid_attribute = self.ad_userattribute
             else:
                 self.ldap_recursive = False
-                self.ldap_active_directory = None
+                self.ldap_active_directory = False
                 self.ldap_openldap_type = self.openldap_type
                 self.ldap_group_filter = self.openldap_filtergroup
                 self.ldap_user_filter = self.openldap_filteruser
