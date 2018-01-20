@@ -26,6 +26,7 @@ class ZabbixConn(object):
         self.ldap_groups = config.ldap_groups
         self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
+        self.deleteorphans = config.zbx_deleteorphans
         self.media_description = config.media_description
         self.user_opt = config.user_opt
         if self.nocheckcertificate:
@@ -386,7 +387,7 @@ class ZabbixConn(object):
                         if not self.dryrun:
                             self.delete_user(eachUser)
                     else:
-                        self.logger.info(' * %s' % eachUser)
+                        self.logger.info('User not in ldap group "%s"' % eachUser)
 
             # update users media
             onlycreate = False

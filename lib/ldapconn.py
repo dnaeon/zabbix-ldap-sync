@@ -111,106 +111,99 @@ class LDAPConn(object):
 
         # Get DN for each user in the group
         if self.active_directory:
+            return self.get_group_members_active_directory(result)
+        else:
+            return self.get_group_members_ldap(result)
 
-            result = self.remove_ad_referrals(result)
+    def get_group_members_ldap(self, result):
+        dn, users = result.pop()
+        final_listing = {}
+        group_members = []
+        # Get info for each user in the group
+        for memberid in users[self.group_member_attribute]:
 
-            final_listing = {}
+            if self.openldap_type == "groupofnames":
+                filter = "(objectClass=*)"
+                # memberid is user dn
+                base = memberid
+            else:
 
-            for members in result:
-                result_dn = members[0]
-                result_attrs = members[1]
+                # memberid is user attribute, most likely uid
+                filter = self.user_filter % memberid
+                base = self.base
 
-            group_members = []
             attrlist = [self.uid_attribute]
 
-            if self.recursive:
-                # Get a DN for all users in a group (recursive)
-                # It's available only on domain controllers with Windows Server 2003 SP2 or later
+            # get the actual LDAP object for each group member
+            uid = self.conn.search_s(base=base,
+                                     scope=ldap.SCOPE_SUBTREE,
+                                     filterstr=filter,
+                                     attrlist=attrlist)
 
-                member_of_filter_dn = self.memberof_filter % result_dn
-
-                if self.skipdisabled:
-                    filter = "(&%s%s%s)" % (self.user_filter, member_of_filter_dn, self.disabled_filter)
-                else:
-                    filter = "(&%s%s)" % (self.user_filter, member_of_filter_dn)
-
-                uid = self.conn.search_s(base=self.base,
-                                         scope=ldap.SCOPE_SUBTREE,
-                                         filterstr=filter,
-                                         attrlist=attrlist)
-
-                for item in self.remove_ad_referrals(uid):
-                    group_members.append(item)
-            else:
-                # Otherwise, just get a DN for each user in the group
-                for member in result_attrs[self.group_member_attribute]:
-                    if self.skipdisabled:
-                        filter = "(&%s%s)" % (self.user_filter, self.disabled_filter)
-                    else:
-                        filter = "(&%s)" % self.user_filter
-
-                    uid = self.conn.search_s(base=member.decode('utf8'),
-                                             scope=ldap.SCOPE_BASE,
-                                             filterstr=filter,
-                                             attrlist=attrlist)
-                    for item in uid:
-                        group_members.append(item)
+            for item in uid:
+                group_members.append(item)
 
             # Fill dictionary with usernames and corresponding DNs
             for item in group_members:
                 dn = item[0]
                 username = item[1][self.uid_attribute]
+                user = ''.join(username)
 
-                if self.lowercase:
-                    username = username[0].decode('utf8').lower()
-                else:
-                    username = username[0].decode('utf8')
+            final_listing[user] = dn
+        return final_listing
 
-                final_listing[username] = dn
+    def get_group_members_active_directory(self, result):
+        result = self.remove_ad_referrals(result)
+        final_listing = {}
+        for members in result:
+            result_dn = members[0]
+            result_attrs = members[1]
+        group_members = []
+        attrlist = [self.uid_attribute]
+        if self.recursive:
+            # Get a DN for all users in a group (recursive)
+            # It's available only on domain controllers with Windows Server 2003 SP2 or later
 
-            return final_listing
+            member_of_filter_dn = self.memberof_filter % result_dn
 
+            if self.skipdisabled:
+                filter = "(&%s%s%s)" % (self.user_filter, member_of_filter_dn, self.disabled_filter)
+            else:
+                filter = "(&%s%s)" % (self.user_filter, member_of_filter_dn)
+
+            uid = self.conn.search_s(base=self.base,
+                                     scope=ldap.SCOPE_SUBTREE,
+                                     filterstr=filter,
+                                     attrlist=attrlist)
+
+            for item in self.remove_ad_referrals(uid):
+                group_members.append(item)
         else:
-
-            dn, users = result.pop()
-
-            final_listing = {}
-
-            group_members = []
-
-            # Get info for each user in the group
-            for memberid in users[self.group_member_attribute]:
-
-                if self.openldap_type == "groupofnames":
-                    filter = "(objectClass=*)"
-                    # memberid is user dn
-                    base = memberid
+            # Otherwise, just get a DN for each user in the group
+            for member in result_attrs[self.group_member_attribute]:
+                if self.skipdisabled:
+                    filter = "(&%s%s)" % (self.user_filter, self.disabled_filter)
                 else:
+                    filter = "(&%s)" % self.user_filter
 
-                    # memberid is user attribute, most likely uid
-                    filter = self.user_filter % memberid
-                    base = self.base
-
-                attrlist = [self.uid_attribute]
-
-                # get the actual LDAP object for each group member
-                uid = self.conn.search_s(base=base,
-                                         scope=ldap.SCOPE_SUBTREE,
+                uid = self.conn.search_s(base=member.decode('utf8'),
+                                         scope=ldap.SCOPE_BASE,
                                          filterstr=filter,
                                          attrlist=attrlist)
-
                 for item in uid:
                     group_members.append(item)
+        # Fill dictionary with usernames and corresponding DNs
+        for item in group_members:
+            dn = item[0]
+            username = item[1][self.uid_attribute]
 
-                # Fill dictionary with usernames and corresponding DNs
-                for item in group_members:
-                    dn = item[0]
-                    username = item[1][self.uid_attribute]
-                    user = ''.join(username)
+            if self.lowercase:
+                username = username[0].decode('utf8').lower()
+            else:
+                username = username[0].decode('utf8')
 
-                final_listing[user] = dn
-
-            return final_listing
+            final_listing[username] = dn
+        return final_listing
 
     def get_groups_with_wildcard(self, groups_wildcard):
         self.logger.info("Search group with wildcard: %s" % groups_wildcard)
