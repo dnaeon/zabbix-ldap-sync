@@ -133,7 +133,7 @@ class ZabbixConn(object):
         """
         result = self.conn.user.get(output='extend')
 
-        userid = [u['userid'] for u in result if u['alias'] == user].pop()
+        userid = [u['userid'] for u in result if u['alias'].lower() == user].pop()
 
         return userid
 
@@ -339,10 +339,14 @@ class ZabbixConn(object):
 
         self.ldap_conn.connect()
         zabbix_all_users = self.get_users()
+        # Lowercase list of user
+        zabbix_all_users = [x.lower() for x in zabbix_all_users]
 
         for eachGroup in self.ldap_groups:
 
             ldap_users = self.ldap_conn.get_group_members(eachGroup)
+            # Lowercase list of users
+            ldap_users = {k.lower(): v for k,v in ldap_users.items()}
 
             # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
             if not ldap_users and not self.deleteorphans:
