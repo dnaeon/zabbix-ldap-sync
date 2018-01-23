@@ -414,6 +414,7 @@ class ZabbixConn(object):
                 zabbix_group_users = self.get_group_members(zabbix_grpid)
 
             for eachUser in set(zabbix_group_users):
+                eachUser = eachUser.lower()
                 self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
                 sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
 
