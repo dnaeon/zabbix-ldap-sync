@@ -132,7 +132,7 @@ class LDAPConn(object):
                 filter = self.user_filter % memberid
                 base = self.base
 
-            attrlist = [self.uid_attribute]
+            attrlist = [self.uid_attribute.encode("utf-8")]
 
             # get the actual LDAP object for each group member
             uid = self.conn.search_s(base=base,
