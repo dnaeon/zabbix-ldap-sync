@@ -29,6 +29,8 @@
 The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 
 """
+import warnings
+import traceback
 import sys
 import os
 from docopt import docopt
