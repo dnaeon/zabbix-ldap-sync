@@ -121,6 +121,7 @@ class LDAPConn(object):
         group_members = []
         # Get info for each user in the group
         for memberid in users[self.group_member_attribute]:
+            memberid = memberid.decode("utf-8")
 
             if self.openldap_type == "groupofnames":
                 filter = "(objectClass=*)"
@@ -132,7 +133,7 @@ class LDAPConn(object):
                 filter = self.user_filter % memberid
                 base = self.base
 
-            attrlist = [self.uid_attribute.encode("utf-8")]
+            attrlist = [self.uid_attribute]
 
             # get the actual LDAP object for each group member
             uid = self.conn.search_s(base=base,
@@ -146,10 +147,12 @@ class LDAPConn(object):
             # Fill dictionary with usernames and corresponding DNs
             for item in group_members:
                 dn = item[0]
+ 
                 username = item[1][self.uid_attribute]
-                user = ''.join(username)
-
+                user = ''.join(username[0].decode('utf-8'))
+            
             final_listing[user] = dn
+
         return final_listing
 
     def get_group_members_active_directory(self, result):

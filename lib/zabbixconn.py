@@ -260,7 +260,7 @@ class ZabbixConn(object):
             media_defaults.update(media_opt)
 
             self.delete_media_by_description(user, description)
-            result = self.conn.user.addmedia(users=[{"userid": str(userid)}], medias=media_defaults)
+            result = self.conn.user.updatemedia(users=[{"userid": str(userid)}], medias=media_defaults)
         else:
             result = None
 
