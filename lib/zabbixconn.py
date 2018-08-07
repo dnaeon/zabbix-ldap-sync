@@ -365,13 +365,15 @@ class ZabbixConn(object):
                 if eachUser not in zabbix_all_users:
                     self.logger.info('Creating user "%s", member of Zabbix group "%s"' % (eachUser, eachGroup))
                     user = {'alias': eachUser}
-                    user['name'] = self.ldap_conn.get_user_givenName(ldap_users[eachUser]).decode('utf8')
-                    user['surname'] = self.ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
 
-                    if user['name'] is None:
+                    if self.ldap_conn.get_user_givenName(ldap_users[eachUser]) is None:
                         user['name'] = ''
-                    if user['surname'] is None:
+                    else:
+                        user['name'] = self.ldap_conn.get_user_givenName(ldap_users[eachUser]).decode('utf8')
+                    if self.ldap_conn.get_user_sn(ldap_users[eachUser]) is None:
                         user['surname'] = ''
+                    else:
+                        user['surname'] = self.ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
 
                     self.create_user(user, zabbix_grpid, self.user_opt)
                     zabbix_all_users.append(eachUser)
@@ -416,7 +418,11 @@ class ZabbixConn(object):
             for eachUser in set(zabbix_group_users):
                 eachUser = eachUser.lower()
                 self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
-                sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
+
+                if self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media):
+                    sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
+                else:
+                    sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media)
 
                 if sendto and not self.dryrun:
                     self.update_media(eachUser, self.media_description, sendto, media_opt_filtered)
