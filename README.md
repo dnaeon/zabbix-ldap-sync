@@ -166,13 +166,13 @@ You can configure additional properties in this section. See [Media object](http
 
 Now that we have the above mentioned configuration file created, let's import our groups and users from LDAP to Zabbix.
 
-	$ zabbix-ldap-sync -f /path/to/zabbix-ldap.conf
+	$ ./zabbix-ldap-sync -f /path/to/zabbix-ldap.conf
 	
 Once the script completes, check your Zabbix Frontend to verify that users are successfully imported.
 
 To sync different LDAP groups with different options, create separate config file for each group and run `zabbix-ldap-sync`:
 
-	$ zabbix-ldap-sync -f /path/to/zabbix-ldap-admins.conf
-	$ zabbix-ldap-sync -f /path/to/zabbix-ldap-users.conf
+	$ ./zabbix-ldap-sync -f /path/to/zabbix-ldap-admins.conf
+	$ ./zabbix-ldap-sync -f /path/to/zabbix-ldap-users.conf
 
 You would generally be running the above scripts on regular basis, say each day from `cron(8)` in order to make sure your Zabbix system is in sync with LDAP.
