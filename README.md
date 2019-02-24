@@ -19,7 +19,7 @@ git remote set-url origin https://github.com/zabbix-tooling/zabbix-ldap-sync.git
 * [pyldap](https://pypi.python.org/pypi/pyldap/)
 * [pyzabbix](https://github.com/lukecyca/pyzabbix)
 * [docopt](https://github.com/docopt/docopt)
-* Zabbix 3.4
+* Zabbix 3.4, 4.0 (not extensivly tested) 
 
 You also need to have your Zabbix Frontend configured to authenticate against an AD/LDAP directory server.
 (using http or ldap-auth)
