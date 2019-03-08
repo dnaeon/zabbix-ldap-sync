@@ -433,14 +433,17 @@ class ZabbixConn(object):
 
             for eachUser in set(zabbix_group_users):
                 eachUser = eachUser.lower()
-                self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
 
-                if self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media):
-                    sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
+                if self.ldap_media:
+                    self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
+                    if self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media):
+                        sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
+                    else:
+                        sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media)
+
+                    if sendto and not self.dryrun:
+                        self.update_media(eachUser, self.media_description, sendto, media_opt_filtered)
                 else:
-                    sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media)
-
-                if sendto and not self.dryrun:
-                    self.update_media(eachUser, self.media_description, sendto, media_opt_filtered)
+                    self.logger.info('>>> Ignoring media for "%s" because of configuration' % (eachUser))
 
         self.ldap_conn.disconnect()

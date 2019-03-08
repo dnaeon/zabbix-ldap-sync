@@ -49,7 +49,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 * `binduser` - LDAP user which has permissions to perform LDAP search
 * `bindpass` - Password for LDAP user
 * `groups` - LDAP groups to sync with Zabbix (support wildcard - TESTED ONLY with Active Directory, see Command-line arguments)
-* `media` - Name of the LDAP attribute of user object, that will be used to set `Send to` property of Zabbix user media. This entry is optional, default value is `mail`.
+* `media` - Name of the LDAP attribute of user object, that will be used to set `Send to` property of Zabbix user media. If entry is not used, no media synchronizastion is made. Common value is `mail`.
 
 #### [ad]
 * `filtergroup` = The ldap filter to get group in ActiveDirectory mode, by default `(&(objectClass=group)(name=%s))`

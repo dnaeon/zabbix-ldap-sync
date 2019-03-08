@@ -41,7 +41,7 @@ class ZabbixLDAPConf(object):
             self.ldap_user = parser.get('ldap', 'binduser')
             self.ldap_passwd = parser.get('ldap', 'bindpass')
 
-            self.ldap_media = self.try_get_item(parser, 'ldap', 'media', 'mail')
+            self.ldap_media = self.try_get_item(parser, 'ldap', 'media', None)
 
             self.ad_filtergroup = parser.get('ad', 'filtergroup', fallback='(&(objectClass=group)(name=%s))', raw=True)
             self.ad_filteruser = parser.get('ad', 'filteruser', fallback='(objectClass=user)(objectCategory=Person))',
