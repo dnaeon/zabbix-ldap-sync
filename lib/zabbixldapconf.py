@@ -1,3 +1,4 @@
+import codecs
 import configparser
 import sys
 import traceback
@@ -15,7 +16,7 @@ class ZabbixLDAPConf(object):
         self.config = config
 
         parser = configparser.ConfigParser()
-        parser.read(self.config)
+        parser.readfp(codecs.open(self.config, "r", "utf-8"))
 
         self.verbose = False
         self.zbx_dryrun = False
