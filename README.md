@@ -103,46 +103,50 @@ You can configure additional properties in this section. See [Media object](http
 
 ## Configuration file example
 
-    [ldap]
-    type = activedirectory
-    uri = ldaps://ldap.example.org:389/
-    base = dc=example,dc=org
-    binduser = DOMAIN\ldapuser
-    bindpass = ldappass
-    groups = sysadmins
-    media = mail
 
-    [ad]
-    filtergroup = (&(objectClass=group)(name=%s))
-    filteruser = (objectClass=user)(objectCategory=Person)
-    filterdisabled = (!(userAccountControl:1.2.840.113556.1.4.803:=2))
-    filtermemberof = (memberOf:1.2.840.113556.1.4.1941:=%s)
-    groupattribute = member
-    userattribute = sAMAccountName
+See [example config file](zabbix-ldap.conf.example), create a copy of this and modify it according to your needs.
+```
+[ldap]
+type = activedirectory
+uri = ldaps://ldap.example.org:389/
+base = dc=example,dc=org
+binduser = DOMAIN\ldapuser
+bindpass = ldappass
+groups = sysadmins
+media = mail
 
-    [openldap]
-    type = posix
-    filtergroup = (&(objectClass=posixGroup)(cn=%s))
-    filteruser = (&(objectClass=posixAccount)(uid=%s))
-    groupattribute = memberUid
-    userattribute = uid
-    
-    [zabbix]
-    server = http://zabbix.example.org/zabbix/
-    username = admin
-    password = adminp4ssw0rd
-    
-    [user]
-    type = 3
-    url = http://zabbix.example.org/zabbix/hostinventories.php
-    autologin = 1
-    
-    [media]
-    description = Email
-    active = 0
-    period = 1-5,07:00-22:00
-    severity = Disaster, High, Average, Warning, Information, Not Classified
-    onlycreate = true
+[ad]
+filtergroup = (&(objectClass=group)(name=%s))
+filteruser = (objectClass=user)(objectCategory=Person)
+filterdisabled = (!(userAccountControl:1.2.840.113556.1.4.803:=2))
+filtermemberof = (memberOf:1.2.840.113556.1.4.1941:=%s)
+groupattribute = member
+userattribute = sAMAccountName
+
+[openldap]
+type = posix
+filtergroup = (&(objectClass=posixGroup)(cn=%s))
+filteruser = (&(objectClass=posixAccount)(uid=%s))
+groupattribute = memberUid
+userattribute = uid
+
+[zabbix]
+server = http://zabbix.example.org/zabbix/
+username = admin
+password = adminp4ssw0rd
+
+[user]
+type = 3
+url = http://zabbix.example.org/zabbix/hostinventories.php
+autologin = 1
+
+[media]
+description = Email
+active = 0
+period = 1-5,07:00-22:00
+severity = Disaster, High, Average, Warning, Information, Not Classified
+onlycreate = true
+```
 
 ## Command-line arguments
 
