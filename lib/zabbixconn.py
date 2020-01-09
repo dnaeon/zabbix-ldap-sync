@@ -37,26 +37,7 @@ class ZabbixConn(object):
             self.ldap_groups = ldap_conn.get_groups_with_wildcard()
 
         # Use logger to log information
-        self.logger = logging.getLogger()
-        if config.verbose:
-            self.logger.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-        # Log to stdout
-        ch = logging.StreamHandler()
-        if config.verbose:
-            ch.setLevel(logging.DEBUG)
-
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)  # Use logger to log information
-
-        # Log from pyzabbix
-        log = logging.getLogger('pyzabbix')
-        log.addHandler(ch)
-        if config.verbose:
-            log.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def connect(self):
         """
@@ -269,6 +250,7 @@ class ZabbixConn(object):
                 'period': '1-7,00:00-24:00'
             }
             media_defaults.update(media_opt)
+            del media_defaults["onlycreate"]
 
             if self.conn.api_version() >= "3.4":
                 result = self.conn.user.update(userid=str(userid), user_medias=[media_defaults])

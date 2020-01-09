@@ -2,6 +2,7 @@ import codecs
 import configparser
 import sys
 import traceback
+import logging
 
 
 class ZabbixLDAPConf(object):
@@ -29,7 +30,7 @@ class ZabbixLDAPConf(object):
         self.zbx_deleteorphans = False
         self.zbx_nocheckcertificate = False
         self.zbx_recursivezbx_recursive = False
-
+        self.logger = logging.getLogger(self.__class__.__name__)
 
         try:
             self.ldap_type = self.try_get_item(parser, 'ldap', 'type', None)

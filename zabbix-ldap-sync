@@ -31,6 +31,7 @@ The zabbix-ldap-sync script is used for syncing LDAP users with Zabbix.
 """
 import warnings
 import traceback
+import logging
 import sys
 import os
 from docopt import docopt
@@ -64,6 +65,25 @@ Options:
 
 """
     args = docopt(usage, version="0.1.1")
+
+    # Use logger to log information
+    logger = logging.getLogger()
+    if args["--verbose"]:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # Log to stdout
+    ch = logging.StreamHandler()
+    if args["--verbose"]:
+         ch.setLevel(logging.DEBUG)
+
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)  # Use logger to log information
+
+
 
     config = ZabbixLDAPConf(args['--file'])
 

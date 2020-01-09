@@ -31,26 +31,9 @@ class LDAPConn(object):
         self.verbose = config.verbose
         self.openldap_type = config.openldap_type
 
-        # Use logger to log information
-        self.logger = logging.getLogger()
-        if self.verbose:
-            self.logger.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-        # Log to stdout
-        ch = logging.StreamHandler()
-        if self.verbose:
-             ch.setLevel(logging.DEBUG)
-
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)  # Use logger to log information
-
+        self.logger = logging.getLogger(self.__class__.__name__)
         # Log from pyldap
         log = logging.getLogger('ldap')
-        log.addHandler(ch)
         if self.verbose:
             log.setLevel(logging.DEBUG)
             ldap.set_option(ldap.OPT_DEBUG_LEVEL, 4095)
