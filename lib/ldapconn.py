@@ -82,6 +82,7 @@ class LDAPConn(object):
         attrlist = [self.group_member_attribute]
         filter = self.group_filter % group
 
+        self.logger.debug('Searching LDAP with filter >>>%s<<<' % filter)
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter,
@@ -119,6 +120,7 @@ class LDAPConn(object):
             attrlist = [self.uid_attribute]
 
             # get the actual LDAP object for each group member
+            self.logger.debug('Searching LDAP with filter >>>%s<<<' % filter)
             uid = self.conn.search_s(base=base,
                                      scope=ldap.SCOPE_SUBTREE,
                                      filterstr=filter,
@@ -157,6 +159,7 @@ class LDAPConn(object):
             else:
                 filter = "(&%s%s)" % (self.user_filter, member_of_filter_dn)
 
+            self.logger.debug('Searching LDAP with filter >>>%s<<<' % filter)
             uid = self.conn.search_s(base=self.base,
                                      scope=ldap.SCOPE_SUBTREE,
                                      filterstr=filter,
@@ -172,6 +175,7 @@ class LDAPConn(object):
                 else:
                     filter = "(&%s)" % self.user_filter
 
+                self.logger.debug('Searching LDAP with filter >>>%s<<<' % filter)
                 uid = self.conn.search_s(base=member.decode('utf8'),
                                          scope=ldap.SCOPE_BASE,
                                          filterstr=filter,
@@ -197,6 +201,7 @@ class LDAPConn(object):
         filter = self.group_filter % groups_wildcard
         result_groups = []
 
+        self.logger.debug('Searching LDAP with filter >>>%s<<<' % filter)
         result = self.conn.search_s(base=self.base,
                                     scope=ldap.SCOPE_SUBTREE,
                                     filterstr=filter, )
