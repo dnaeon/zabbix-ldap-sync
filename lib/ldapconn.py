@@ -134,7 +134,7 @@ class LDAPConn(object):
                 username = item[1][self.uid_attribute]
                 user = ''.join(username[0].decode('utf-8'))
             
-            final_listing[user] = dn
+                final_listing[user] = dn
 
         return final_listing
 
