@@ -250,7 +250,8 @@ class ZabbixConn(object):
                 'period': '1-7,00:00-24:00'
             }
             media_defaults.update(media_opt)
-            del media_defaults["onlycreate"]
+            if "onlycreate" in media_defaults:
+                del media_defaults["onlycreate"]
 
             if self.conn.api_version() >= "3.4":
                 result = self.conn.user.update(userid=str(userid), user_medias=[media_defaults])
