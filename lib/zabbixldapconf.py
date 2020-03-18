@@ -16,7 +16,7 @@ class ZabbixLDAPConf(object):
     def __init__(self, config):
         self.config = config
 
-        parser = configparser.ConfigParser()
+        parser = configparser.RawConfigParser()
         parser.readfp(codecs.open(self.config, "r", "utf-8"))
 
         self.verbose = False
