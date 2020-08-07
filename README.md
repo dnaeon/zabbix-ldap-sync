@@ -36,6 +36,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+CentOS 8 variant:
+```
+sudo yum install python3-devel openldap-devel
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
 ## Configuration
 
 In order to use the *zabbix-ldap-sync* script we need to create a configuration file describing the various LDAP and Zabbix related config entries.
