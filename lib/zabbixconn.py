@@ -178,7 +178,7 @@ class ZabbixConn(object):
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
 
-        user_defaults = {'autologin': 0, 'type': 1, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
+        user_defaults = {'autologin': 0, 'roleid': 1, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
         user_defaults.update(user_opt)
         user.update(user_defaults)
 

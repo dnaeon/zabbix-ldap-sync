@@ -83,7 +83,7 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 #### [user]
 Allows to override various properties for Zabbix users created by script. See [User object](https://www.zabbix.com/documentation/3.2/manual/api/reference/user/object) in Zabbix API documentation for available properties. If section/property doesn't exist, defaults are:
 
- * `type = 1` - User type. Possible values: `1` - (default) Zabbix user; `2` - Zabbix admin; `3` - Zabbix super admin. 
+ * `roleid = 1` - User roleid. Possible values: `1` - (default) Zabbix user; `2` - Zabbix admin; `3` - Zabbix super admin. 
 
 #### [media]
 Allows to override media type and various properties for Zabbix media for users created by script.
@@ -144,7 +144,7 @@ username = admin
 password = adminp4ssw0rd
 
 [user]
-type = 3
+roleid = 3
 url = http://zabbix.example.org/zabbix/hostinventories.php
 autologin = 1
 
