@@ -29,7 +29,7 @@ password = adminp4ssw0rd
 auth = webform
 
 [user]
-type = 1
+roleid = 1
 
 [media]
 description = Email
