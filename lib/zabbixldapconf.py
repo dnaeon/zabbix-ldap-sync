@@ -64,6 +64,11 @@ class ZabbixLDAPConf(object):
             self.openldap_userattribute = parser.get('openldap', 'userattribute', fallback='uid', raw=True)
 
             self.zbx_server = parser.get('zabbix', 'server')
+            self.zbx_server_release = parser.get('zabbix', 'release')
+
+            if self.zbx_server_release not in ["5.2", "pre5.2"]:
+                raise Exception("use zbx_server_release '5.2' or 'pre5.2'")
+
             self.zbx_username = parser.get('zabbix', 'username')
             self.zbx_password = parser.get('zabbix', 'password')
             self.zbx_auth = parser.get('zabbix', 'auth')

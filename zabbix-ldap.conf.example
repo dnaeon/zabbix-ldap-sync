@@ -4,16 +4,19 @@ uri = ldaps://ldap.example.org:636/
 base = dc=example,dc=org
 binduser = DOMAIN\ldapuser
 bindpass = ldappass
-groups = sysadmins,other_group_with_access
+groups = sysadmins,developer group
 media = mail
 
 [ad]
 filtergroup = (&(objectClass=group)(name=%s))
-filteruser = (objectClass=user)(objectCategory=Person)
+filteruser = (&(objectClass=user)(objectCategory=Person))
 filterdisabled = (!(userAccountControl:1.2.840.113556.1.4.803:=2))
 filtermemberof = (memberOf:1.2.840.113556.1.4.1941:=%s)
 groupattribute = member
+# Active Directory
 userattribute = sAMAccountName
+# Azure Active Directory
+#userattribute = userPrincipalName
 
 [openldap]
 type = posix
@@ -27,9 +30,17 @@ server = http://zabbix.example.org/zabbix/
 username = admin
 password = adminp4ssw0rd
 auth = webform
+# use "pre5.2" for releases prior 5.2
+release = 5.2
 
 [user]
+# see https://www.zabbix.com/documentation/current/manual/api/reference/user/object
+# use "type" for releases prior 5.2
+type = 1
+# use "roleid" for releases after 5.2
 roleid = 1
+timezone = Europe/Berlin
+rows_per_page = 100
 
 [media]
 description = Email

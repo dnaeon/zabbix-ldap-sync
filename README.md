@@ -29,14 +29,15 @@ Check the official documentation of Zabbix on how to
 
 ### Setup virtualenv
 
+Debian and Ubuntu Systems:
 ```
-apt-get install python-dev virtualenv libpython3.*-dev libldap2-dev libsasl2-dev
+sudo apt-get install python-dev virtualenv libpython3.*-dev libldap2-dev libsasl2-dev
 virtualenv -p python3 venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-CentOS 8 variant:
+CentOS and Redhat Systems:
 ```
 sudo yum install python3-devel openldap-devel
 python3 -m venv venv
@@ -111,50 +112,7 @@ You can configure additional properties in this section. See [Media object](http
 
 ## Configuration file example
 
-
 See [example config file](zabbix-ldap.conf.example), create a copy of this and modify it according to your needs.
-```
-[ldap]
-type = activedirectory
-uri = ldaps://ldap.example.org:389/
-base = dc=example,dc=org
-binduser = DOMAIN\ldapuser
-bindpass = ldappass
-groups = sysadmins
-media = mail
-
-[ad]
-filtergroup = (&(objectClass=group)(name=%s))
-filteruser = (objectClass=user)(objectCategory=Person)
-filterdisabled = (!(userAccountControl:1.2.840.113556.1.4.803:=2))
-filtermemberof = (memberOf:1.2.840.113556.1.4.1941:=%s)
-groupattribute = member
-userattribute = sAMAccountName
-
-[openldap]
-type = posix
-filtergroup = (&(objectClass=posixGroup)(cn=%s))
-filteruser = (&(objectClass=posixAccount)(uid=%s))
-groupattribute = memberUid
-userattribute = uid
-
-[zabbix]
-server = http://zabbix.example.org/zabbix/
-username = admin
-password = adminp4ssw0rd
-
-[user]
-roleid = 3
-url = http://zabbix.example.org/zabbix/hostinventories.php
-autologin = 1
-
-[media]
-description = Email
-active = 0
-period = 1-5,07:00-22:00
-severity = Disaster, High, Average, Warning, Information, Not Classified
-onlycreate = true
-```
 
 ## Command-line arguments
 
@@ -188,3 +146,19 @@ To sync different LDAP groups with different options, create separate config fil
 	$ ./zabbix-ldap-sync -f /path/to/zabbix-ldap-users.conf
 
 You would generally be running the above scripts on regular basis, say each day from `cron(8)` in order to make sure your Zabbix system is in sync with LDAP.
+
+# Open Tasks
+
+This tool works for years now, but from a view of serious software development this piece of code still needs major refactorings ;-)
+
+If you want to contribute to this tool, the following tasks would be useful:
+
+- eliminate the need of different configuration sections for ldap 'openldap' and 'ad'
+- introduce python typeing
+- add support for setting passwords
+- isolate configuration logic in lib/zabbixldapconf.py
+- add software tests
+- provide the possibility 
+
+
+

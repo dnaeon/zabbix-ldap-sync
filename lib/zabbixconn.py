@@ -18,6 +18,7 @@ class ZabbixConn(object):
     def __init__(self, config, ldap_conn):
         self.ldap_conn = ldap_conn
         self.server = config.zbx_server
+        self.server_release = config.zbx_server_release
         self.username = config.zbx_username
         self.password = config.zbx_password
         self.auth = config.zbx_auth
@@ -178,7 +179,13 @@ class ZabbixConn(object):
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
 
-        user_defaults = {'autologin': 0, 'roleid': 1, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
+        
+        user_defaults = {'autologin': 0, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
+        if self.server_release == "5.2":
+            user_defaults['roleid'] = 1
+        else:
+            user_defaults['type'] = 1
+
         user_defaults.update(user_opt)
         user.update(user_defaults)
 
