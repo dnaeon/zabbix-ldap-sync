@@ -147,18 +147,22 @@ To sync different LDAP groups with different options, create separate config fil
 
 You would generally be running the above scripts on regular basis, say each day from `cron(8)` in order to make sure your Zabbix system is in sync with LDAP.
 
-# Open Tasks
+# Open Developent Tasks
 
 This tool works for years now, but from a view of serious software development this piece of code still needs major refactorings ;-)
+Starting from the original implementation, some things have already been improved, extended and simplified.
+In my busy everyday life, I have unfortunately not yet found time for the following topics.
 
-If you want to contribute to this tool, the following tasks would be useful:
-
+- eliminate the need to pass around configuration values
 - eliminate the need of different configuration sections for ldap 'openldap' and 'ad'
 - introduce python typeing
 - add support for setting passwords
 - isolate configuration logic in lib/zabbixldapconf.py
 - add software tests
 - provide the possibility 
+- add possibility to 
+
+Contributions are very welcome.
 
 
 
