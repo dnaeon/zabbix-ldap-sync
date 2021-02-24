@@ -1,5 +1,7 @@
 *~
 \#*
-zabbix-ldap*.conf
+*.conf
 lib/__pycache__/*
 *.pyc
+*.swo
+*.swp
