@@ -7,7 +7,7 @@ bindpass = ldappass
 groups = sysadmins,developer group
 media = mail
 
-[ad]
+[activedirectory]
 filtergroup = (&(objectClass=group)(name=%s))
 filteruser = (&(objectClass=user)(objectCategory=Person))
 filterdisabled = (!(userAccountControl:1.2.840.113556.1.4.803:=2))
@@ -43,6 +43,7 @@ timezone = Europe/Berlin
 rows_per_page = 100
 
 [media]
-description = Email
+name = Email (HTML)
 severity = Disaster,High,Average,Warning
+onlycreate = true
 

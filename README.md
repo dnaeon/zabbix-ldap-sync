@@ -51,6 +51,8 @@ In order to use the *zabbix-ldap-sync* script we need to create a configuration 
 
 ### Config file sections
 
+You can use [Apache Directory Studio](https://directory.apache.org/studio/) to test the ldap connection, filters and to inspect available attributes.
+
 #### [ldap]
 * `type` - Select type of ldap server, can be `activedirectory` or `openldap`
 * `uri` - URI of the LDAP server, including port

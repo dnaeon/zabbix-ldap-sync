@@ -45,15 +45,15 @@ class ZabbixLDAPConf(object):
 
             self.ldap_media = self.try_get_item(parser, 'ldap', 'media', None)
 
-            self.ad_filtergroup = parser.get('ad', 'filtergroup', fallback='(&(objectClass=group)(name=%s))', raw=True)
-            self.ad_filteruser = parser.get('ad', 'filteruser', fallback='(objectClass=user)(objectCategory=Person))',
+            self.ad_filtergroup = parser.get('activedirectory', 'filtergroup', fallback='(&(objectClass=group)(name=%s))', raw=True)
+            self.ad_filteruser = parser.get('activedirectory', 'filteruser', fallback='(objectClass=user)(objectCategory=Person))',
                                             raw=True)
-            self.ad_filterdisabled = parser.get('ad', 'filterdisabled',
+            self.ad_filterdisabled = parser.get('activedirectory', 'filterdisabled',
                                                 fallback='(!(userAccountControl:1.2.840.113556.1.4.803:=2))', raw=True)
-            self.ad_filtermemberof = parser.get('ad', 'filtermemberof',
+            self.ad_filtermemberof = parser.get('activedirectory', 'filtermemberof',
                                                 fallback='(memberOf:1.2.840.113556.1.4.1941:=%s)', raw=True)
-            self.ad_groupattribute = parser.get('ad', 'groupattribute', fallback='member', raw=True)
-            self.ad_userattribute = parser.get('ad', 'userattribute', fallback='sAMAccountName', raw=True)
+            self.ad_groupattribute = parser.get('activedirectory', 'groupattribute', fallback='member', raw=True)
+            self.ad_userattribute = parser.get('activedirectory', 'userattribute', fallback='sAMAccountName', raw=True)
 
             self.openldap_type = parser.get('openldap', 'type', fallback='posixgroup')
             self.openldap_filtergroup = parser.get('openldap', 'filtergroup',
@@ -64,10 +64,6 @@ class ZabbixLDAPConf(object):
             self.openldap_userattribute = parser.get('openldap', 'userattribute', fallback='uid', raw=True)
 
             self.zbx_server = parser.get('zabbix', 'server')
-            self.zbx_server_release = parser.get('zabbix', 'release')
-
-            if self.zbx_server_release not in ["5.2", "pre5.2"]:
-                raise Exception("use zbx_server_release '5.2' or 'pre5.2'")
 
             self.zbx_username = parser.get('zabbix', 'username')
             self.zbx_password = parser.get('zabbix', 'password')
@@ -75,7 +71,8 @@ class ZabbixLDAPConf(object):
 
             self.user_opt = self.try_get_section(parser, 'user', {})
 
-            self.media_description = self.try_get_item(parser, 'media', 'description', 'Email')
+            self.media_name = self.try_get_item(parser, 'media', 'name', 'Email (HTML)')
+
             self.media_opt = self.remove_config_section_items(self.try_get_section(parser, 'media', {}),
                                                               ('description', 'userid'))
 

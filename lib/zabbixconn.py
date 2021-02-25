@@ -18,7 +18,6 @@ class ZabbixConn(object):
     def __init__(self, config, ldap_conn):
         self.ldap_conn = ldap_conn
         self.server = config.zbx_server
-        self.server_release = config.zbx_server_release
         self.username = config.zbx_username
         self.password = config.zbx_password
         self.auth = config.zbx_auth
@@ -28,7 +27,7 @@ class ZabbixConn(object):
         self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
         self.deleteorphans = config.zbx_deleteorphans
-        self.media_description = config.media_description
+        self.media_name = config.media_name
         self.user_opt = config.user_opt
         if self.nocheckcertificate:
             from requests.packages.urllib3 import disable_warnings
@@ -82,18 +81,21 @@ class ZabbixConn(object):
 
         return users
 
-    def get_mediatype_id(self, description):
+    def get_mediatype_id(self, name):
         """
-        Retrieves the mediatypeid by description
+        Retrieves the mediatypeid by name
 
         Args:
-            description (str): Zabbix media type description
+            name (str): Zabbix media type name
 
         Returns:
-            The mediatypeid for specified media type description
+            The mediatypeid for specified media type name
 
         """
-        result = self.conn.mediatype.get(filter={'description': description})
+        result = self.conn.mediatype.get(filter={'name': name.strip()})
+        
+        if len(result) != 1:
+            raise Exception(f"Ambiguous media found, {len(result)} different medias")
 
         if result:
             mediatypeid = result[0]['mediatypeid']
@@ -181,7 +183,7 @@ class ZabbixConn(object):
 
         
         user_defaults = {'autologin': 0, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
-        if self.server_release == "5.2":
+        if self.conn.api_version() >= "5.2":
             user_defaults['roleid'] = 1
         else:
             user_defaults['type'] = 1
@@ -257,8 +259,10 @@ class ZabbixConn(object):
                 'period': '1-7,00:00-24:00'
             }
             media_defaults.update(media_opt)
-            if "onlycreate" in media_defaults:
-                del media_defaults["onlycreate"]
+
+            for unwanted_attrib in [ "description", "name", "onlycreate" ]:
+                if unwanted_attrib in media_defaults:
+                    del media_defaults[unwanted_attrib]
 
             if self.conn.api_version() >= "3.4":
                 result = self.conn.user.update(userid=str(userid), user_medias=[media_defaults])
@@ -425,14 +429,14 @@ class ZabbixConn(object):
                 eachUser = eachUser.lower()
 
                 if self.ldap_media:
-                    self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_description))
+                    self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_name))
                     if self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media):
                         sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
                     else:
                         sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media)
 
                     if sendto and not self.dryrun:
-                        self.update_media(eachUser, self.media_description, sendto, media_opt_filtered)
+                        self.update_media(eachUser, self.media_name, sendto, media_opt_filtered)
                 else:
                     self.logger.info('>>> Ignoring media for "%s" because of configuration' % (eachUser))
 
