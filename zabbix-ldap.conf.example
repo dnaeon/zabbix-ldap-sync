@@ -30,14 +30,12 @@ server = http://zabbix.example.org/zabbix/
 username = admin
 password = adminp4ssw0rd
 auth = webform
-# use "pre5.2" for releases prior 5.2
-release = 5.2
 
 [user]
 # see https://www.zabbix.com/documentation/current/manual/api/reference/user/object
-# use "type" for releases prior 5.2
-type = 1
-# use "roleid" for releases after 5.2
+# use "type" for releases prior 5.2,
+# type = 1
+# use "roleid" for releases after 5.2, comment out "type"
 roleid = 1
 timezone = Europe/Berlin
 rows_per_page = 100
