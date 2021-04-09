@@ -93,7 +93,7 @@ class ZabbixConn(object):
 
         """
         result = self.conn.mediatype.get(filter={'name': name.strip()})
-        
+
         if len(result) != 1:
             raise Exception(f"Ambiguous media found, {len(result)} different medias")
 
@@ -181,7 +181,6 @@ class ZabbixConn(object):
         """
         random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
 
-        
         user_defaults = {'autologin': 0, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
         if self.conn.api_version() >= "5.2":
             user_defaults['roleid'] = 1
@@ -221,17 +220,17 @@ class ZabbixConn(object):
         userid = self.get_user_id(user)
 
         if self.conn.api_version() >= "3.4":
-          members = self.conn.usergroup.get(usrgrpids=[str(groupid)],selectUsers='extended')
-          grpusers = members[0]['users']
-          userids = set()
-          for u in grpusers:
-            userids.add(u['userid'])
-          userids.add(str(userid))
-          if not self.dryrun:
-            result = self.conn.usergroup.update(usrgrpid=str(groupid), userids=list(userids))
+            members = self.conn.usergroup.get(usrgrpids=[str(groupid)], selectUsers='extended')
+            grpusers = members[0]['users']
+            userids = set()
+            for u in grpusers:
+                userids.add(u['userid'])
+            userids.add(str(userid))
+            if not self.dryrun:
+                result = self.conn.usergroup.update(usrgrpid=str(groupid), userids=list(userids))
         else:
-          if not self.dryrun:
-            result = self.conn.usergroup.massadd(usrgrpids=[str(groupid)], userids=[str(userid)])
+            if not self.dryrun:
+                result = self.conn.usergroup.massadd(usrgrpids=[str(groupid)], userids=[str(userid)])
 
         return result
 
@@ -260,7 +259,7 @@ class ZabbixConn(object):
             }
             media_defaults.update(media_opt)
 
-            for unwanted_attrib in [ "description", "name", "onlycreate" ]:
+            for unwanted_attrib in ["description", "name", "onlycreate"]:
                 if unwanted_attrib in media_defaults:
                     del media_defaults[unwanted_attrib]
 
@@ -354,7 +353,7 @@ class ZabbixConn(object):
 
             ldap_users = self.ldap_conn.get_group_members(eachGroup)
             # Lowercase list of users
-            ldap_users = {k.lower(): v for k,v in ldap_users.items()}
+            ldap_users = {k.lower(): v for k, v in ldap_users.items()}
 
             # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
             if not ldap_users and not self.deleteorphans:
@@ -384,13 +383,13 @@ class ZabbixConn(object):
                         user['surname'] = self.ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
 
                     if not self.dryrun:
-                      self.create_user(user, zabbix_grpid, self.user_opt)
+                        self.create_user(user, zabbix_grpid, self.user_opt)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
                     self.logger.info('Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
                     if not self.dryrun:
-                      self.update_user(eachUser, zabbix_grpid)
+                        self.update_user(eachUser, zabbix_grpid)
 
             # Handle any extra users in the groups
             extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
@@ -429,7 +428,8 @@ class ZabbixConn(object):
                 eachUser = eachUser.lower()
 
                 if self.ldap_media:
-                    self.logger.info('>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_name))
+                    self.logger.info(
+                        '>>> Updating/create user media for "%s", update "%s"' % (eachUser, self.media_name))
                     if self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media):
                         sendto = self.ldap_conn.get_user_media(ldap_users[eachUser], self.ldap_media).decode("utf8")
                     else:

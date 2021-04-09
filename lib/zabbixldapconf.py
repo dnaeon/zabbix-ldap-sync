@@ -17,14 +17,14 @@ class ZabbixLDAPConf(object):
         self.config = config
 
         parser = configparser.RawConfigParser()
-        parser.readfp(codecs.open(self.config, "r", "utf-8"))
+        parser.read_file(codecs.open(self.config, "r", "utf-8"))
 
         self.verbose = False
         self.zbx_dryrun = False
 
         self.ldap_lowercase = False
         self.ldap_recursive = False
-        self.ldap_wildcard_search =  False
+        self.ldap_wildcard_search = False
         self.ldap_skipdisabled = False
 
         self.zbx_deleteorphans = False
@@ -33,7 +33,7 @@ class ZabbixLDAPConf(object):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         try:
-            self.ldap_type = self.try_get_item(parser, 'ldap', 'type', None)
+            self.ldap_type = ZabbixLDAPConf.try_get_item(parser, 'ldap', 'type', None)
 
             self.ldap_uri = parser.get('ldap', 'uri')
             self.ldap_base = parser.get('ldap', 'base')
@@ -43,10 +43,12 @@ class ZabbixLDAPConf(object):
             self.ldap_user = parser.get('ldap', 'binduser')
             self.ldap_passwd = parser.get('ldap', 'bindpass')
 
-            self.ldap_media = self.try_get_item(parser, 'ldap', 'media', None)
+            self.ldap_media = ZabbixLDAPConf.try_get_item(parser, 'ldap', 'media', None)
 
-            self.ad_filtergroup = parser.get('activedirectory', 'filtergroup', fallback='(&(objectClass=group)(name=%s))', raw=True)
-            self.ad_filteruser = parser.get('activedirectory', 'filteruser', fallback='(objectClass=user)(objectCategory=Person))',
+            self.ad_filtergroup = parser.get('activedirectory', 'filtergroup',
+                                             fallback='(&(objectClass=group)(name=%s))', raw=True)
+            self.ad_filteruser = parser.get('activedirectory', 'filteruser',
+                                            fallback='(objectClass=user)(objectCategory=Person))',
                                             raw=True)
             self.ad_filterdisabled = parser.get('activedirectory', 'filterdisabled',
                                                 fallback='(!(userAccountControl:1.2.840.113556.1.4.803:=2))', raw=True)
@@ -69,13 +71,13 @@ class ZabbixLDAPConf(object):
             self.zbx_password = parser.get('zabbix', 'password')
             self.zbx_auth = parser.get('zabbix', 'auth')
 
-            self.user_opt = self.try_get_section(parser, 'user', {})
+            self.user_opt = ZabbixLDAPConf.try_get_section(parser, 'user', {})
 
-            self.media_name = self.try_get_item(parser, 'media', 'name', 'Email (HTML)')
+            self.media_name = ZabbixLDAPConf.try_get_item(parser, 'media', 'name', 'Email (HTML)')
 
-            self.media_opt = self.remove_config_section_items(self.try_get_section(parser, 'media', {}),
-                                                              ('description', 'userid'))
-
+            self.media_opt = ZabbixLDAPConf.remove_config_section_items(
+                ZabbixLDAPConf.try_get_section(parser, 'media', {}),
+                ['description', 'userid'])
 
             if self.ldap_type == 'activedirectory':
                 self.ldap_active_directory = True
@@ -99,7 +101,8 @@ class ZabbixLDAPConf(object):
             traceback.print_exc(file=sys.stderr)
             raise SystemExit('Configuration issues detected in %s' % self.config)
 
-    def try_get_item(self, parser, section, option, default):
+    @staticmethod
+    def try_get_item(parser, section, option, default):
         """
         Gets config item
 
@@ -121,7 +124,8 @@ class ZabbixLDAPConf(object):
 
         return result
 
-    def try_get_section(self, parser, section, default):
+    @staticmethod
+    def try_get_section(parser, section, default):
         """
         Gets config section
 
@@ -142,7 +146,8 @@ class ZabbixLDAPConf(object):
 
         return result
 
-    def remove_config_section_items(self, section, items):
+    @staticmethod
+    def remove_config_section_items(section, items):
         """
         Removes items from config section
 
