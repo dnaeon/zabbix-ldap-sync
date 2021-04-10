@@ -220,15 +220,16 @@ class ZabbixConn(object):
         """
         userid = self.get_user_id(user)
 
+        result = None
         if self.conn.api_version() >= "3.4":
             members = self.conn.usergroup.get(usrgrpids=[str(groupid)], selectUsers='extended')
-            grpusers = members[0]['users']
-            userids = set()
-            for u in grpusers:
-                userids.add(u['userid'])
-            userids.add(str(userid))
+            group_users = members[0]['users']
+            user_ids = set()
+            for u in group_users:
+                user_ids.add(u['userid'])
+            user_ids.add(str(userid))
             if not self.dryrun:
-                result = self.conn.usergroup.update(usrgrpid=str(groupid), userids=list(userids))
+                result = self.conn.usergroup.update(usrgrpid=str(groupid), userids=list(user_ids))
         else:
             if not self.dryrun:
                 result = self.conn.usergroup.massadd(usrgrpids=[str(groupid)], userids=[str(userid)])
@@ -346,29 +347,23 @@ class ZabbixConn(object):
         """
 
         self.ldap_conn.connect()
-        zabbix_all_users = self.get_users()
-        # Lowercase list of user
-        zabbix_all_users = [x.lower() for x in zabbix_all_users]
 
         for eachGroup in self.ldap_groups:
-
-            ldap_users = self.ldap_conn.get_group_members(eachGroup)
-            # Lowercase list of users
-            ldap_users = {k.lower(): v for k, v in ldap_users.items()}
+            zabbix_all_users = [x.lower() for x in self.get_users()]
+            ldap_users = {k.lower(): v for k, v in self.ldap_conn.get_group_members(eachGroup).items()}
 
             # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
             if not ldap_users and not self.deleteorphans:
                 continue
 
-            zabbix_grpid = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
+            zabbix_group_id = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
 
-            zabbix_group_users = self.get_group_members(zabbix_grpid)
+            zabbix_group_users = self.get_group_members(zabbix_group_id)
 
             missing_users = set(list(ldap_users.keys())) - set(zabbix_group_users)
 
             # Add missing users
             for eachUser in missing_users:
-
                 # Create new user if it does not exists already
                 if eachUser not in zabbix_all_users:
                     random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
@@ -390,13 +385,13 @@ class ZabbixConn(object):
                         user['surname'] = self.ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
 
                     if not self.dryrun:
-                        self.create_user(user, zabbix_grpid, self.user_opt, random_passwd)
+                        self.create_user(user, zabbix_group_id, self.user_opt, random_passwd)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
                     self.logger.info('Updating user "%s", adding to group "%s"' % (eachUser, eachGroup))
                     if not self.dryrun:
-                        self.update_user(eachUser, zabbix_grpid)
+                        self.update_user(eachUser, zabbix_group_id)
 
             # Handle any extra users in the groups
             extra_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
@@ -429,7 +424,7 @@ class ZabbixConn(object):
                 zabbix_group_users = missing_users
             else:
                 self.logger.info("Update media on all users for group >>>%s<<<" % eachGroup)
-                zabbix_group_users = self.get_group_members(zabbix_grpid)
+                zabbix_group_users = self.get_group_members(zabbix_group_id)
 
             for eachUser in set(zabbix_group_users):
                 eachUser = eachUser.lower()
