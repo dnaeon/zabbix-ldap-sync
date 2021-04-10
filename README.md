@@ -151,14 +151,16 @@ You would generally be running the above scripts on regular basis, say each day 
 
 # Open Developent Tasks
 
-This tool works for years now, but from a view of serious software development this piece of code still needs major refactorings ;-)
+This tool works for years now, but from a view of serious software development this piece of code still needs major refactorings.
+Major refactoring tends to break things which are not available in my testing environment.
+
 Starting from the original implementation, some things have already been improved, extended and simplified.
 In my busy everyday life, I have unfortunately not yet found time for the following topics.
 
-- eliminate the need to pass around configuration values
+- eliminate the need to pass around configuration values between classes
 - eliminate the need of different configuration sections for ldap 'openldap' and 'ad'
-- introduce python typeing
-- add support for setting passwords
+- remove all warnings
+- introduce python typing
 - isolate configuration logic in lib/zabbixldapconf.py
 - add software tests
 - provide the possibility 

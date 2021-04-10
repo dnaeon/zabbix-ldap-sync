@@ -39,9 +39,15 @@ auth = webform
 roleid = 1
 timezone = Europe/Berlin
 rows_per_page = 100
+# display password when creating new users
+show_password = true
 
 [media]
 name = Email (HTML)
 severity = Disaster,High,Average,Warning
+period = 1-7,00:07-22:00
+# 1=disabled, 0=enabled
+active = 1
+severity = Disaster,High,Average
 onlycreate = true
 

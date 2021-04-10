@@ -169,7 +169,7 @@ class ZabbixConn(object):
 
         return groupid
 
-    def create_user(self, user, groupid, user_opt):
+    def create_user(self, user, groupid, user_opt, password):
         """
         Creates a new Zabbix user
 
@@ -179,19 +179,20 @@ class ZabbixConn(object):
             user_opt (dict): User options
 
         """
-        random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
-
-        user_defaults = {'autologin': 0, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': random_passwd}
+        user_settings = {'autologin': 0, 'usrgrps': [{'usrgrpid': str(groupid)}], 'passwd': password}
         if self.conn.api_version() >= "5.2":
-            user_defaults['roleid'] = 1
+            user_settings['roleid'] = 1
         else:
-            user_defaults['type'] = 1
+            user_settings['type'] = 1
 
-        user_defaults.update(user_opt)
-        user.update(user_defaults)
+        for opt, value in user_opt:
+            if opt == "show_password":
+                continue
+            else:
+                user_settings[opt] = value
 
+        user.update(user_settings)
         result = self.conn.user.create(user)
-
         return result
 
     def delete_user(self, user):
@@ -335,7 +336,7 @@ class ZabbixConn(object):
             str_bitmask += digit
 
         converted_severity = str(int(str_bitmask, 2))
-        self.logger.info('Converted severity "%s" to "%s"' % (severity, converted_severity))
+        self.logger.debug('Converted severity "%s" to "%s"' % (severity, converted_severity))
 
         return converted_severity
 
@@ -370,7 +371,13 @@ class ZabbixConn(object):
 
                 # Create new user if it does not exists already
                 if eachUser not in zabbix_all_users:
-                    self.logger.info('Creating user "%s", member of Zabbix group "%s"' % (eachUser, eachGroup))
+                    random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
+                    for opt, value in self.user_opt:
+                        if opt == "show_password" and value.lower() == "true":
+                            self.logger.info(f"Created user {eachUser}, start password" +\
+                                             f" {random_passwd} and membership of Zabbix group >>{eachGroup}<<")
+                        else:
+                            self.logger.info(f"Created user {eachUser} and membership of Zabbix group >>{eachGroup}<<")
                     user = {'alias': eachUser}
 
                     if self.ldap_conn.get_user_givenName(ldap_users[eachUser]) is None:
@@ -383,7 +390,7 @@ class ZabbixConn(object):
                         user['surname'] = self.ldap_conn.get_user_sn(ldap_users[eachUser]).decode('utf8')
 
                     if not self.dryrun:
-                        self.create_user(user, zabbix_grpid, self.user_opt)
+                        self.create_user(user, zabbix_grpid, self.user_opt, random_passwd)
                     zabbix_all_users.append(eachUser)
                 else:
                     # Update existing user to be member of the group
