@@ -2,3 +2,6 @@ pyldap~=3.0.0.post1
 pyzabbix~=0.8.2
 docopt
 requests
+mypy
+flake8
+pytest

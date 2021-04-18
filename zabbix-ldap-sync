@@ -67,7 +67,8 @@ Options:
     else:
         logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter_string = '%(asctime)-10s - %(levelname)-7s - %(name)s:%(lineno)d - %(message)s'
+    formatter = logging.Formatter(formatter_string)
 
     # Log to stdout
     ch = logging.StreamHandler()
@@ -91,7 +92,7 @@ Options:
     config.dryrun = args['--dryrun']
 
     ldap_conn = LDAPConn(config)
-
+    ldap_conn.connect()
     zabbix_conn = ZabbixConn(config, ldap_conn)
     zabbix_conn.connect()
     zabbix_conn.create_missing_groups()

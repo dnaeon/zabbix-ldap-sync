@@ -35,7 +35,7 @@ class ZabbixConn(object):
             disable_warnings()
 
         if config.ldap_wildcard_search:
-            self.ldap_groups = ldap_conn.get_groups_with_wildcard()
+            self.ldap_groups = ldap_conn.get_groups_with_wildcard(self.ldap_groups)
 
         # Use logger to log information
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -210,7 +210,7 @@ class ZabbixConn(object):
 
         return result
 
-    def update_user(self, user, group_id):
+    def update_user(self, user: str, group_id: int):
         """
         Adds an existing Zabbix user to a group
 
@@ -219,7 +219,7 @@ class ZabbixConn(object):
             group_id  (int): The groupid to add the user to
 
         """
-        userid = self.get_user_id(user['alias'])
+        userid = self.get_user_id(user)
 
         result = None
         if self.conn.api_version() >= "3.4":
@@ -315,7 +315,7 @@ class ZabbixConn(object):
 
         converted_severity = severity.strip()
 
-        if re.match("\d+", converted_severity):
+        if re.match(r"\d+", converted_severity):
             return converted_severity
 
         sev_entries = collections.OrderedDict({
@@ -370,7 +370,7 @@ class ZabbixConn(object):
                     random_passwd = ''.join(random.sample(string.ascii_letters + string.digits, 32))
                     for opt, value in self.user_opt:
                         if opt == "show_password" and value.lower() == "true":
-                            self.logger.info(f"Created user {each_user}, start password" +\
+                            self.logger.info(f"Created user {each_user}, start password" +
                                              f" {random_passwd} and membership of Zabbix group >>{eachGroup}<<")
                         else:
                             self.logger.info(f"Created user {each_user} and membership of Zabbix group >>{eachGroup}<<")

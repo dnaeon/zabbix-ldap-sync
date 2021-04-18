@@ -5,3 +5,5 @@ lib/__pycache__/*
 *.pyc
 *.swo
 *.swp
+venv
+.idea

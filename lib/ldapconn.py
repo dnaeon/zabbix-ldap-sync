@@ -66,7 +66,7 @@ class LDAPConn(object):
         Remove referrals from AD query result
 
         """
-        return [i for i in result if i[0] != None]
+        return [i for i in result if i[0] is not None]
 
     def get_group_members(self, group):
         """
@@ -194,30 +194,6 @@ class LDAPConn(object):
                 final_listing[username] = dn
         return final_listing
 
-    def get_groups_with_wildcard(self, groups_wildcard):
-        self.logger.info("Search group with wildcard: %s" % groups_wildcard)
-
-        filter = self.group_filter % groups_wildcard
-        result_groups = []
-
-        self.logger.debug('Searching LDAP with filter >>>%s<<<' % filter)
-        result = self.conn.search_s(base=self.base,
-                                    scope=ldap.SCOPE_SUBTREE,
-                                    filterstr=filter, )
-
-        for group in result:
-            # Skip refldap (when Active Directory used)
-            # [0]==None
-            if group[0]:
-                group_name = group[1]['name'][0]
-                self.logger.info("Find group %s" % group_name)
-                result_groups.append(group_name)
-
-        if not result_groups:
-            self.logger.info('Unable to find group "%s", skipping group wildcard' % groups_wildcard)
-
-        return result_groups
-
     def get_user_media(self, dn, ldap_media):
         """
         Retrieves the 'media' attribute of an LDAP user
@@ -306,20 +282,31 @@ class LDAPConn(object):
 
         return name.pop()
 
-    def get_groups_with_wildcard(self):
-        """
-        Set group from LDAP with wildcard
-        :return:
-        """
-        result_groups = []
-        ldap_conn = LDAPConn(self.ldap_uri, self.ldap_base, self.ldap_user, self.ldap_pass)
-        ldap_conn.connect()
+    def get_groups_with_wildcard(self, groups_wildcard: str):
 
-        for group in self.ldap_groups:
-            groups = ldap_conn.get_groups_with_wildcard(group)
-            result_groups = result_groups + groups
+        filters = []
+        for wildcard in groups_wildcard:
+            self.logger.info("Search groups with wildcard: %s" % wildcard)
+            filters.append(self.group_filter % wildcard)
+
+        ldap_filter = "(| %s)" % (" ".join(filters))
+
+        result_groups = []
+
+        self.logger.debug('Searching LDAP with filter >>>%s<<<' % ldap_filter)
+        result = self.conn.search_s(base=self.base,
+                                    scope=ldap.SCOPE_SUBTREE,
+                                    filterstr=ldap_filter)
+
+        for group in result:
+            # Skip refldap (when Active Directory used)
+            # [0]==None
+            if group[0]:
+                group_name = group[1]['name'][0].decode()
+                self.logger.info("Find group %s" % group_name)
+                result_groups.append(group_name)
 
         if not result_groups:
-            raise SystemExit('ERROR - No groups found with wildcard')
+            self.logger.info('Unable to find group "%s", skipping group wildcard' % groups_wildcard)
 
         return result_groups
