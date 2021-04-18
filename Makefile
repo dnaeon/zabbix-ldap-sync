@@ -1,3 +1,10 @@
+SHELL = bash
+IMAGE_REPO = scoopex666
+IMAGE_NAME = zabbix-ldap-sync
+TAG = dev
+TAG_PUBLISH = $(shell git describe --abbrev=0 --tags)_$(shell date --date="today" "+%Y-%m-%d_%H-%M-%S")
+FORCE_UPGRADE_MARKER ?= $(shell date "+%Y-%m-%d")
+
 .PHONY: all deps clean prune
 
 venv = . venv/bin/activate
@@ -34,4 +41,24 @@ lint: deps
 type-check: deps
 	${venv} && python3 -m mypy zabbix-ldap-sync lib
 .PHONY: lint
+
+
+build:
+	docker build -t ${IMAGE_NAME}:${TAG} --build-arg FORCE_UPGRADE_MARKER="${FORCE_UPGRADE_MARKER}" -f Dockerfile .
+	@docker images ${IMAGE_NAME}:${TAG} --format='DockerImage Size: {{.Size}}'
+
+clean_docker:
+	docker rmi ${IMAGE_NAME}:${TAG} || true
+
+publish: clean_docker build
+	docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_REPO}/${IMAGE_NAME}:${TAG_PUBLISH}
+	docker push ${IMAGE_REPO}/${IMAGE_NAME}:${TAG_PUBLISH}
+	docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_REPO}/${IMAGE_NAME}:latest
+	docker push ${IMAGE_REPO}/${IMAGE_NAME}:latest
+
+testdocker: build
+   docker run --rm --name ${IMAGE_NAME} ${IMAGE_NAME}:${TAG} -- -c zabbix-ldap.conf.example
+
+inspect: build
+   docker run --rm --name ${IMAGE_NAME} -ti  ${IMAGE_NAME}:${TAG} -- bash
 
