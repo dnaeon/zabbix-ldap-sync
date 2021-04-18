@@ -303,7 +303,7 @@ class LDAPConn(object):
             # [0]==None
             if group[0]:
                 group_name = group[1]['name'][0].decode()
-                self.logger.info("Find group %s" % group_name)
+                self.logger.info("Found group %s" % group_name)
                 result_groups.append(group_name)
 
         if not result_groups:
