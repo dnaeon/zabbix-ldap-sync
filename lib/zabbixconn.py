@@ -82,7 +82,7 @@ class ZabbixConn(object):
 
         return users
 
-    def get_mediatype_id(self, name):
+    def get_mediatype_id(self, name: str):
         """
         Retrieves the mediatypeid by name
 
@@ -95,8 +95,10 @@ class ZabbixConn(object):
         """
         result = self.conn.mediatype.get(filter={'name': name.strip()})
 
-        if len(result) != 1:
-            raise Exception(f"Ambiguous media found, {len(result)} different medias")
+        if len(result) < 1:
+            raise Exception(f"No such media for {name} found, check your configuration")
+        elif len(result) > 1:
+            raise Exception(f"Ambiguous media '{name}' found, {len(result)} different medias")
 
         if result:
             mediatypeid = result[0]['mediatypeid']
@@ -237,7 +239,7 @@ class ZabbixConn(object):
 
         return result
 
-    def update_media(self, user: str, description: str, sendto: str, media_opt):
+    def update_media(self, user: str, description: str, sendto: str, media_opt: dict):
         """
         Adds media to an existing Zabbix user
 
