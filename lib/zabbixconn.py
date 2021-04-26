@@ -132,7 +132,7 @@ class ZabbixConn(object):
             A dict of the existing Zabbix groups and their group ids
 
         """
-        result = self.conn.usergroup.get(status=0, output='extend')
+        result = self.conn.usergroup.get(output='extend')
 
         groups = [{'name': group['name'], 'usrgrpid': group['usrgrpid']} for group in result]
 
