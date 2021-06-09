@@ -21,6 +21,7 @@ class ZabbixConn(object):
         self.server = config.zbx_server
         self.username = config.zbx_username
         self.password = config.zbx_password
+        self.alldirusergroup = config.zbx_alldirusergroup
         self.auth = config.zbx_auth
         self.dryrun = config.dryrun
         self.nocheckcertificate = config.zbx_nocheckcertificate
@@ -28,6 +29,7 @@ class ZabbixConn(object):
         self.ldap_media = config.ldap_media
         self.media_opt = config.media_opt
         self.deleteorphans = config.zbx_deleteorphans
+        self.removeabsent = config.zbx_removeabsent
         self.media_name = config.media_name
         self.user_opt = config.user_opt
         if self.nocheckcertificate:
@@ -239,6 +241,30 @@ class ZabbixConn(object):
 
         return result
 
+    def remove_user(self, user: str, group_id: int):
+        """
+        Remove existing Zabbix user from group
+
+        Args:
+            user    (dict): A dict containing the user details
+            group_id  (int): The groupid to add the user to
+
+        """
+        userid = self.get_user_id(user)
+
+        result = None
+        if self.conn.api_version() >= "3.4":
+            members = self.conn.usergroup.get(usrgrpids=[str(group_id)], selectUsers='extended')
+            group_users = members[0]['users']
+            user_ids = set()
+            for u in group_users:
+                if u['userid'] != userid:
+                    user_ids.add(u['userid'])
+            if not self.dryrun:
+                result = self.conn.usergroup.update(usrgrpid=str(group_id), userids=list(user_ids))
+
+        return result
+
     def update_media(self, user: str, description: str, sendto: str, media_opt: dict):
         """
         Adds media to an existing Zabbix user
@@ -350,13 +376,17 @@ class ZabbixConn(object):
         """
 
         self.ldap_conn.connect()
+        zabbix_alldirusergroup_id = [g['usrgrpid'] for g in self.get_groups() if g['name'] == self.alldirusergroup].pop()
+        zabbix_alldirusergroup_users = self.get_group_members(zabbix_alldirusergroup_id)
 
         for eachGroup in self.ldap_groups:
+            self.logger.info('Processing group %s...' % eachGroup)
             zabbix_all_users = [x.lower() for x in self.get_users()]
             ldap_users = {k.lower(): v for k, v in self.ldap_conn.get_group_members(eachGroup).items()}
 
             # Do nothing if LDAP group contains no users and "--delete-orphans" is not specified
-            if not ldap_users and not self.deleteorphans:
+            if not ldap_users and not self.deleteorphans and not self.removeabsent:
+                self.logger.info('Done for group %s. Nothing to do' % eachGroup)
                 continue
 
             zabbix_group_id = [g['usrgrpid'] for g in self.get_groups() if g['name'] == eachGroup].pop()
@@ -366,6 +396,7 @@ class ZabbixConn(object):
             missing_users = set(list(ldap_users.keys())) - set(zabbix_group_users)
 
             # Add missing users
+            self.logger.info('Syncing users...')
             for each_user in missing_users:
                 # Create new user if it does not exists already
                 if each_user not in zabbix_all_users:
@@ -396,19 +427,39 @@ class ZabbixConn(object):
                     if not self.dryrun:
                         self.update_user(each_user, zabbix_group_id)
 
-            # Handle any extra users in the groups
+            # Add users to Zabbix all directory users
+            self.logger.info('Adding users to group %s...' % self.alldirusergroup)
+            missing_allusers = set(list(ldap_users.keys())) - set(zabbix_alldirusergroup_users)
+            for each_user in missing_allusers:
+                self.logger.info('Updating user "%s", adding to group "%s"' % (each_user, self.alldirusergroup))
+                self.update_user(each_user, zabbix_alldirusergroup_id)
+
+            # Handle any extra users in the group
+            self.logger.info('Handle extra users...')
             absent_users = set(zabbix_group_users) - set(list(ldap_users.keys()))
+            count = 0
             if absent_users:
-                self.logger.info('Users in group %s which are not found in LDAP group:' % eachGroup)
                 for each_user in absent_users:
+                    if each_user not in zabbix_alldirusergroup_users:
+                        continue
+                    count = count + 1
+                    if count == 1:
+                        self.logger.info('Users in group %s which are not found in LDAP group:' % eachGroup)
                     if self.deleteorphans:
                         self.logger.info('Deleting user: "%s"' % each_user)
                         if not self.dryrun:
                             self.delete_user(each_user)
                     else:
                         self.logger.info('User not in ldap group "%s"' % each_user)
+                        if self.removeabsent:
+                            self.logger.info('Removing user from group: "%s"...' % each_user)
+                            if not self.dryrun:
+                                self.remove_user(each_user, zabbix_group_id)
+            # if count == 0:
+            #     self.logger.info('No absent users')
 
             # update users media
+            self.logger.info('Updating media for users...')
             onlycreate = False
             media_opt_filtered = []
             for elem in self.media_opt:
@@ -443,5 +494,7 @@ class ZabbixConn(object):
                         self.update_media(each_user, self.media_name, sendto, media_opt_filtered)
                 else:
                     self.logger.info('>>> Ignoring media for "%s" because of configuration' % each_user)
+            self.logger.info('Done for group %s' % eachGroup)
 
         self.ldap_conn.disconnect()
+        self.logger.info('Done!')

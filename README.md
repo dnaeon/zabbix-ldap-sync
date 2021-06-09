@@ -82,6 +82,7 @@ You can use [Apache Directory Studio](https://directory.apache.org/studio/) to t
 * `username` - Zabbix username. This user must have permissions to add/remove users and groups. Typically, this would be `Zabbix Admin` account.
 * `password` - Password for Zabbix user
 * `auth` - can be `http` (for basic auth) or `webform` (for regular form based login)
+* `alldirusergroup` - Group in Zabbix where to put all Directory users. Is used to check users when removing from Zabbix groups when removed from Directory group
 
 #### [user]
 Allows to override various properties for Zabbix users created by script. See [User object](https://www.zabbix.com/documentation/3.2/manual/api/reference/user/object) in Zabbix API documentation for available properties. If section/property doesn't exist, defaults are:
@@ -130,7 +131,7 @@ See [example config file](zabbix-ldap.conf.example), create a copy of this and m
       -s, --skip-disabled           Skip disabled AD users
       -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
       -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*) - TESTED ONLY with Active Directory
-      -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
+      -a, --remove-absent           Remove Zabbix users from group that don't exist in a LDAP group
       -n, --no-check-certificate    Don't check Zabbix server certificate
       --verbose                     Print debug message from ZabbixAPI
       -f <config>, --file <config>  Configuration file to use

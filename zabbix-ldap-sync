@@ -40,7 +40,7 @@ from lib.zabbixldapconf import ZabbixLDAPConf
 
 def main():
     usage = """
-Usage: zabbix-ldap-sync [-lsrwdn] [--verbose] [--dryrun] -f <config>
+Usage: zabbix-ldap-sync [-lsrwdna] [--verbose] [--dryrun] -f <config>
        zabbix-ldap-sync -v
        zabbix-ldap-sync -h
 
@@ -52,6 +52,7 @@ Options:
   -r, --recursive               Resolves AD group members recursively (i.e. nested groups)
   -w, --wildcard-search         Search AD group with wildcard (e.g. R.*.Zabbix.*) - TESTED ONLY with Active Directory
   -d, --delete-orphans          Delete Zabbix users that don't exist in a LDAP group
+  -a, --remove-absent           Remove Zabbix users from group that don't exist in a LDAP group
   -n, --no-check-certificate    Don't check Zabbix server certificate
   --verbose                     Print debug message from ZabbixAPI
   --dryrun                      Just simulate zabbix interaction
@@ -83,6 +84,7 @@ Options:
     config.zbx_lowercase = args['--lowercase']
     config.zbx_skipdisabled = args['--skip-disabled']
     config.zbx_deleteorphans = args['--delete-orphans']
+    config.zbx_removeabsent = args['--remove-absent']
     config.zbx_nocheckcertificate = args['--no-check-certificate']
 
     config.ldap_recursive = args['--recursive']

@@ -30,6 +30,7 @@ server = http://zabbix.example.org/zabbix
 username = admin
 password = adminp4ssw0rd
 auth = webform
+alldirusergroup = LDAP synced users
 
 [user]
 # see https://www.zabbix.com/documentation/current/manual/api/reference/user/object
